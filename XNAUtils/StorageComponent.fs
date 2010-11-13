@@ -74,22 +74,24 @@ let doStorageIO
     | Ready, Some storage_dev ->
         ThreadPool.QueueUserWorkItem(fun _ ->
             try
-                let container = storage_dev.OpenContainer(containerName)
-                if container <> null
-                then
-                    use container = container
-                    let path = Path.Combine(container.Path, filename)
-                    if mode = FileMode.Open && not(File.Exists(path))
+                let callback (result : IAsyncResult) =
+                    use container = storage_dev.EndOpenContainer(result)
+                    if container <> null
                     then
-                        { data with state = FailedIO(fun () ->
-                                FileNotFoundException(filename)
-                                |> excHandler) }
-                        |> returnData
-                    else
-                        use stream = File.Open(path, mode)
-                        operation(stream)
-                        { data with state = SuccessfulIO(completion) }
-                        |> returnData
+                        if mode = FileMode.Open && not(container.FileExists(filename))
+                        then
+                            { data with state = FailedIO(fun () ->
+                                    FileNotFoundException(filename)
+                                    |> excHandler) }
+                            |> returnData
+                        else
+                            use stream = container.OpenFile(filename, mode)
+                            operation(stream)
+                            { data with state = SuccessfulIO(completion) }
+                            |> returnData
+
+                storage_dev.BeginOpenContainer(containerName, new AsyncCallback(callback), null) |> ignore
+
             with
                 | exc ->
                     match exc with
@@ -150,9 +152,9 @@ let update returnData (dt : GameTime) (data : Data) =
         { data with state = Ready }
         
     | StartReqTitleStorage(completion, failed) when not(Guide.IsVisible) ->
-        Guide.BeginShowStorageDeviceSelector(
+        StorageDevice.BeginShowSelector(
             (fun (result : IAsyncResult) ->
-                let storage_dev = Guide.EndShowStorageDeviceSelector(result)
+                let storage_dev = StorageDevice.EndShowSelector(result)
                 if storage_dev <> null
                 then
                     completion storage_dev
@@ -170,10 +172,10 @@ let update returnData (dt : GameTime) (data : Data) =
         data
         
     | StartReqUserStorage(p, completion, failed) when not(Guide.IsVisible) ->
-        Guide.BeginShowStorageDeviceSelector(
+        StorageDevice.BeginShowSelector(
             p,
             (fun (result : IAsyncResult) ->
-                let storage_dev = Guide.EndShowStorageDeviceSelector(result)
+                let storage_dev = StorageDevice.EndShowSelector(result)
                 if storage_dev <> null
                 then
                     completion storage_dev
@@ -234,7 +236,7 @@ let update returnData (dt : GameTime) (data : Data) =
         |> resetDisconnectedStorage        
 
             
-type IOAction = delegate of FileStream -> unit
+type IOAction = delegate of Stream -> unit
 
 type StorageEventArgs(storage : StorageDevice) =
     inherit EventArgs()
