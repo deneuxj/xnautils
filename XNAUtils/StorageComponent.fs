@@ -72,35 +72,33 @@ let doStorageIO
     
     match data.state, getStorageDevice data with
     | Ready, Some storage_dev ->
-        ThreadPool.QueueUserWorkItem(fun _ ->
-            try
-                let callback (result : IAsyncResult) =
-                    use container = storage_dev.EndOpenContainer(result)
-                    if container <> null
+        try
+            let callback (result : IAsyncResult) =
+                use container = storage_dev.EndOpenContainer(result)
+                if container <> null
+                then
+                    if mode = FileMode.Open && not(container.FileExists(filename))
                     then
-                        if mode = FileMode.Open && not(container.FileExists(filename))
-                        then
-                            { data with state = FailedIO(fun () ->
-                                    FileNotFoundException(filename)
-                                    |> excHandler) }
-                            |> returnData
-                        else
-                            use stream = container.OpenFile(filename, mode)
-                            operation(stream)
-                            { data with state = SuccessfulIO(completion) }
-                            |> returnData
-
-                storage_dev.BeginOpenContainer(containerName, new AsyncCallback(callback), null) |> ignore
-
-            with
-                | exc ->
-                    match exc with
-                    | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
-                        { data with state = FailedIO(fun () -> excHandler(exc)) }
-                        |> setStorageDevice None
+                        { data with state = FailedIO(fun () ->
+                                FileNotFoundException(filename)
+                                |> excHandler) }
                         |> returnData
-                    | _ -> failwith "Unexpected exception"
-        ) |> ignore
+                    else
+                        use stream = container.OpenFile(filename, mode)
+                        operation(stream)
+                        { data with state = SuccessfulIO(completion) }
+                        |> returnData
+
+            storage_dev.BeginOpenContainer(containerName, new AsyncCallback(callback), null) |> ignore
+
+        with
+            | exc ->
+                match exc with
+                | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
+                    { data with state = FailedIO(fun () -> excHandler(exc)) }
+                    |> setStorageDevice None
+                    |> returnData
+                | _ -> failwith "Unexpected exception"
         { data with state = DoingIO }
     
     | _, _ -> raise (new InvalidOperationException())
