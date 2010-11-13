@@ -1,0 +1,5 @@
+relre:.suo$
+relre:^XNAUtils/bin/.*
+relre:^XNAUtils/obj/.*
+glob:UpgradeLog.XML
+relre:^_UpgradeReport_Files/.*
