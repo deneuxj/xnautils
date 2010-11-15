@@ -6,3 +6,4 @@ relre:^_UpgradeReport_Files/.*
 relre:^Samples/.*/bin/.*
 relre:^Samples/.*/obj/.*
 glob:Samples/Xbox360/App/App/App.csproj.Debug.cachefile
+glob:Samples/Xbox360/App/App/App.csproj.Release.cachefile
