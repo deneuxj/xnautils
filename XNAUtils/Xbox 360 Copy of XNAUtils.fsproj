@@ -37,9 +37,9 @@
   <ItemGroup>
     <None Include="Script.fsx" />
     <Compile Include="TextIcons.fs" />
+    <Compile Include="CircularQueue.fs" />
     <Compile Include="StorageComponent.fs" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="CircularQueue.fs" />
     <Compile Include="JobQueueProcessor.fs" />
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />

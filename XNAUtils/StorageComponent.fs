@@ -24,15 +24,41 @@ open Microsoft.Xna.Framework.GamerServices
 open Microsoft.Xna.Framework.Storage
 open Microsoft.FSharp.Control
 
+open XNAUtils.CircularQueue
+
+type RunningThreadState<'R>() =
+    let mutable is_done = false
+    let mutable result = Unchecked.defaultof<'R>
+    
+    member x.Complete(r) =
+        lock x (fun () ->
+            result <- r
+            is_done <- true
+        )            
+    
+    member x.IsCompleted =
+        lock x (fun () ->
+            is_done
+        )
+    
+    member x.Result =
+        lock x (fun () ->
+            result
+        )
+        
 type State =
     | StartReqTitleStorage of (StorageDevice -> unit) * (unit -> unit)
-    | RequestingTitleStorage
+    | RequestingTitleStorage of IAsyncResult * (StorageDevice -> unit) * (unit -> unit)
+    | FailedReqTitleStorage of (unit -> unit)
+    | DoneReqTitleStorage of (unit -> unit)
     | StartSignIn of PlayerIndex * (StorageDevice -> unit) * (unit -> unit)
     | SigningIn of PlayerIndex  * (StorageDevice -> unit) * (unit -> unit)
-    | NotSignedInInfo
+    | NotSignedInInfo of IAsyncResult * PlayerIndex  * (StorageDevice -> unit) * (unit -> unit)
     | StartReqUserStorage of PlayerIndex * (StorageDevice -> unit) * (unit -> unit)
-    | RequestingUserStorage
-    | DoingIO
+    | RequestingUserStorage of IAsyncResult * (StorageDevice -> unit) * (unit -> unit)
+    | FailedReqUserStorage of (unit -> unit)
+    | DoneReqUserStorage of (unit -> unit)
+    | DoingIO of RunningThreadState<State>
     | FailedIO of (unit -> unit)
     | SuccessfulIO of (unit -> unit)
     | Ready
@@ -65,69 +91,80 @@ let resetUserStorage data =
 
 let doStorageIO
     (getStorageDevice : Data -> StorageDevice option) setStorageDevice
-    returnData
     containerName filename
     (mode : FileMode)
     operation completion (excHandler : Exception -> unit) data =
     
-    match data.state, getStorageDevice data with
-    | Ready, Some storage_dev ->
-        try
-            let callback (result : IAsyncResult) =
-                use container = storage_dev.EndOpenContainer(result)
-                if container <> null
-                then
-                    if mode = FileMode.Open && not(container.FileExists(filename))
+    match getStorageDevice data with
+    | Some storage_dev ->
+        let thread_state = new RunningThreadState<State>()
+        
+        // FIXME: Exception handling. I don't think XNA 4.0 behaves the same way XNA 3.1 did when it comes to what methods throw which exceptions.
+        let callback =
+            fun (result : IAsyncResult) ->
+                try
+                    use container = storage_dev.EndOpenContainer(result)
+                    if container <> null
                     then
-                        { data with state = FailedIO(fun () ->
+                        if mode = FileMode.Open && not(container.FileExists(filename))
+                        then
+                            FailedIO(fun () ->
                                 FileNotFoundException(filename)
-                                |> excHandler) }
-                        |> returnData
-                    else
-                        use stream = container.OpenFile(filename, mode)
-                        operation(stream)
-                        { data with state = SuccessfulIO(completion) }
-                        |> returnData
+                                |> excHandler)
+                            |> thread_state.Complete
+                        else
+                            use stream = container.OpenFile(filename, mode)
+                            operation(stream)
+                            SuccessfulIO(completion)
+                            |> thread_state.Complete
+                with
+                    | exc ->
+                        match exc with
+                        | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
+                            FailedIO (fun () -> excHandler(exc))
+                            |> thread_state.Complete
+                        | _ -> failwith "Unexpected exception"
+            |> fun f -> new AsyncCallback(f)
 
-            storage_dev.BeginOpenContainer(containerName, new AsyncCallback(callback), null) |> ignore
+        storage_dev.BeginOpenContainer(
+            containerName,
+            callback,
+            null)
+        |> ignore
 
-        with
-            | exc ->
-                match exc with
-                | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
-                    { data with state = FailedIO(fun () -> excHandler(exc)) }
-                    |> setStorageDevice None
-                    |> returnData
-                | _ -> failwith "Unexpected exception"
-        { data with state = DoingIO }
+        { data with state = DoingIO thread_state }
     
-    | _, _ -> raise (new InvalidOperationException())
+    | _ -> raise (new InvalidOperationException())
 
-let doTitleStorageIO returnData filename mode operation completion excHandler data =
-    doStorageIO
-        (fun (data : Data) -> data.titleStorage)
-        (fun dev (data : Data) -> { data with titleStorage = dev })
-        returnData
-        "TitleStorage"
-        filename
-        mode
-        operation
-        completion
-        excHandler
-        data
+let doTitleStorageIO filename mode operation completion excHandler data =
+    match data.state with
+    | Ready ->
+        doStorageIO
+            (fun (data : Data) -> data.titleStorage)
+            (fun dev (data : Data) -> { data with titleStorage = dev })
+            "TitleStorage"
+            filename
+            mode
+            operation
+            completion
+            excHandler
+            data
+    | _ -> raise (new InvalidOperationException())
 
-let doUserStorageIO returnData containerName filename mode operation completion excHandler data =
-    doStorageIO
-        (fun (data : Data) -> data.userStorage)
-        (fun dev (data : Data) -> { data with userStorage = dev })
-        returnData
-        containerName
-        filename
-        mode
-        operation
-        completion
-        excHandler
-        data
+let doUserStorageIO containerName filename mode operation completion excHandler data =
+    match data.state with
+    | Ready ->
+        doStorageIO
+            (fun (data : Data) -> data.userStorage)
+            (fun dev (data : Data) -> { data with userStorage = dev })
+            containerName
+            filename
+            mode
+            operation
+            completion
+            excHandler
+            data
+    | _ -> raise (new InvalidOperationException())
 
 let resetDisconnectedStorage (data : Data) =
     let filter (storage : StorageDevice) =
@@ -143,49 +180,23 @@ let resetDisconnectedStorage (data : Data) =
         userStorage =
             data.userStorage |> Option.bind filter }
 
-let update returnData (dt : GameTime) (data : Data) =
-    match data.state with
-    | SuccessfulIO f | FailedIO f  ->
-        f()
-        { data with state = Ready }
-        
+let update (dt : GameTime) (data : Data) =
+    match data.state with        
     | StartReqTitleStorage(completion, failed) when not(Guide.IsVisible) ->
-        StorageDevice.BeginShowSelector(
-            (fun (result : IAsyncResult) ->
-                let storage_dev = StorageDevice.EndShowSelector(result)
-                if storage_dev <> null
-                then
-                    completion storage_dev
-                    { data with state = Ready ; titleStorage = Some storage_dev }
-                    |> returnData
-                else
-                    failed()
-                    { data with state = Ready ; titleStorage = None }
-                    |> returnData
-            ), null)
-        |> ignore
-        { data with state = RequestingTitleStorage }
+        let async_res =
+            StorageDevice.BeginShowSelector(
+                (fun _ -> ()), null)
+        { data with state = RequestingTitleStorage (async_res, completion, failed) }
         
     | StartReqTitleStorage(_, _) ->
         data
         
     | StartReqUserStorage(p, completion, failed) when not(Guide.IsVisible) ->
-        StorageDevice.BeginShowSelector(
-            p,
-            (fun (result : IAsyncResult) ->
-                let storage_dev = StorageDevice.EndShowSelector(result)
-                if storage_dev <> null
-                then
-                    completion storage_dev
-                    { data with state = Ready ; userStorage = Some storage_dev }
-                    |> returnData
-                else
-                    failed()
-                    { data with state = Ready ; userStorage = None }
-                    |> returnData
-            ), null)
-        |> ignore
-        { data with state = RequestingUserStorage }
+        let async_res =
+            StorageDevice.BeginShowSelector(
+                p,
+                (fun _ -> ()), null)
+        { data with state = RequestingUserStorage (async_res, completion, failed) }
         
     | StartReqUserStorage _ ->
         data
@@ -200,39 +211,77 @@ let update returnData (dt : GameTime) (data : Data) =
     | SigningIn(p, req_storage_completion, req_storage_failed) when not(Guide.IsVisible) ->
         if Gamer.SignedInGamers.[p] = null
         then
-            Guide.BeginShowMessageBox(
-                p,
-                "Not signed in",
-                "You must be signed in in order to load and save user settings",
-                [|"Sign in now"; "Don't sign in"|],
-                0,
-                MessageBoxIcon.Alert,
-                (fun result ->
-                    let choice = Guide.EndShowMessageBox(result)
-                    if choice.HasValue && choice.Value = 0
-                    then
-                        { data with state = StartSignIn(p, req_storage_completion, req_storage_failed) }
-                        |> returnData
-                    else
-                        { data with state = Ready }
-                        |> returnData
-                ),
-                null)
-            |> ignore
-            { data with state = NotSignedInInfo }
+            let async_res =
+                Guide.BeginShowMessageBox(
+                    p,
+                    "Not signed in",
+                    "You must be signed in in order to load and save user settings",
+                    [|"Sign in now"; "Don't sign in"|],
+                    0,
+                    MessageBoxIcon.Alert,
+                    (fun _ -> ()), 
+                    null)
+            { data with state = NotSignedInInfo (async_res, p, req_storage_completion, req_storage_failed) }
         else
             { data with state = StartReqUserStorage(p, req_storage_completion, req_storage_failed) }
             
     | SigningIn _ ->
         data
+    
+    | RequestingTitleStorage (async_res, completion, failed) ->
+        if async_res.IsCompleted
+        then
+            let storage_dev = StorageDevice.EndShowSelector(async_res)
+            if storage_dev <> null
+            then
+                { data with state = DoneReqTitleStorage (fun () -> completion storage_dev); titleStorage = Some storage_dev }
+            else
+                { data with state = FailedReqTitleStorage failed ; titleStorage = None }
+        else
+            data
+    
+    | RequestingUserStorage (async_res, completion, failed) ->
+        if async_res.IsCompleted
+        then
+            let storage_dev = StorageDevice.EndShowSelector(async_res)
+            if storage_dev <> null
+            then
+                { data with state = DoneReqUserStorage (fun () -> completion storage_dev) ; userStorage = Some storage_dev }
+            else
+                { data with state = FailedReqUserStorage failed ; userStorage = None }
+        else
+            data
+    
+    | SuccessfulIO f ->
+        f()
+        { data with state = Ready }
         
-    | DoingIO | RequestingTitleStorage | RequestingUserStorage | NotSignedInInfo ->
-        data
+    | DoneReqTitleStorage f | DoneReqUserStorage f | FailedReqTitleStorage f | FailedReqUserStorage f | SuccessfulIO f | FailedIO f  ->
+        f()
+        { data with state = Ready }
+    
+    | NotSignedInInfo (async_res, p, req_storage_completion, req_storage_failed) ->
+        if async_res.IsCompleted
+        then
+            let choice = Guide.EndShowMessageBox(async_res)
+            if choice.HasValue && choice.Value = 0
+            then
+                { data with state = StartSignIn(p, req_storage_completion, req_storage_failed) }
+            else
+                { data with state = Ready }
+        else
+            data
+        
+    | DoingIO (thread_state) ->
+        if thread_state.IsCompleted
+        then
+            { data with state = thread_state.Result } 
+        else
+            data
     
     | Ready ->
         data
         |> resetDisconnectedStorage        
-
             
 type IOAction = delegate of Stream -> unit
 
@@ -245,7 +294,7 @@ type StorageEventHandler = EventHandler<StorageEventArgs>
 
 type StorageComponent(game) =
     inherit GameComponent(game)
-    
+    let queued_ops : (Data -> Data) CircularQueue = newQueue 4
     let title_storage_acquired_event = new Control.Event<StorageEventArgs>()
     let title_storage_not_acquired_event = new Control.Event<EventArgs>()
     let title_storage_lost_event = new Control.Event<StorageEventArgs>()
@@ -256,23 +305,25 @@ type StorageComponent(game) =
     let data = ref { state = Ready ; titleStorage = None ; userStorage = None }
 
     let setData data' =
-        lock data (fun () -> data := data')
+        data := data'
     
     let getData() =
-        lock data (fun () -> !data)
+        !data
 
     let getDoSet f =
         let d0 = getData()
         let d' = f d0
-        lock data (fun () ->
-            // Check if a side effect in f changed data before setting data to d'
-            // This is needed when Guide.Begin* methods execute immediately (e.g. on the PC)
-            if Object.ReferenceEquals(!data, d0)
-            then
-                data := d'
-            else
-                ()
-            )
+        setData d'
+
+    let isReady state =
+        match state with
+        | Ready -> true
+        | _ -> false
+        
+    let execQueued() =
+        if isReady (getData().state) && not (CircularQueue.isEmpty queued_ops) then
+            let op = CircularQueue.pick queued_ops
+            getDoSet op
 
     member x.IsReady
         with get () =
@@ -292,33 +343,35 @@ type StorageComponent(game) =
             d.userStorage.IsSome
             
     member x.RequestTitleStorage() =
-        getDoSet (requestTitleStorage
+        CircularQueue.add queued_ops (requestTitleStorage
             (fun storage -> title_storage_acquired_event.Trigger(new StorageEventArgs(storage)))
             (fun () -> title_storage_not_acquired_event.Trigger(new EventArgs())))
     
     member x.RequestUserStorage(p : PlayerIndex) =
-        getDoSet (requestUserStorage
+        CircularQueue.add queued_ops (requestUserStorage
             (fun storage -> user_storage_acquired_event.Trigger(new StorageEventArgs(storage)))
             (fun () -> user_storage_not_acquired_event.Trigger(new EventArgs()))
             p)
         
     member x.ResetTitleStorage() =
-        getDoSet resetTitleStorage
+        CircularQueue.add queued_ops resetTitleStorage
     
     member x.ResetUserStorage() =
-        getDoSet resetUserStorage
+        CircularQueue.add queued_ops resetUserStorage
     
     member x.DoTitleStorageIO(filename : string, mode : FileMode, operation : IOAction, completionHandler : Action, excHandler : Action<Exception>) =
-        getDoSet (doTitleStorageIO setData filename mode operation.Invoke completionHandler.Invoke excHandler.Invoke)
+        CircularQueue.add queued_ops (doTitleStorageIO filename mode operation.Invoke completionHandler.Invoke excHandler.Invoke)
     
     member x.DoUserStorageIO(containerName : string, filename : string, mode : FileMode, operation : IOAction, completionHandler : Action, excHandler : Action<Exception>) =
-        getDoSet (doUserStorageIO setData containerName filename mode operation.Invoke completionHandler.Invoke excHandler.Invoke)
+        CircularQueue.add queued_ops (doUserStorageIO containerName filename mode operation.Invoke completionHandler.Invoke excHandler.Invoke)
         
     override x.Update(dt : GameTime) =
+        execQueued()
+        
         let bak_user_storage = (!data).userStorage
         let bak_title_storage = (!data).titleStorage
         
-        getDoSet (update setData dt)
+        getDoSet (update dt)
     
         match bak_user_storage, (!data).userStorage with
         | Some storage, None when not (storage.IsConnected) -> user_storage_lost_event.Trigger (new StorageEventArgs(storage))
