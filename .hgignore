@@ -3,3 +3,6 @@ relre:^XNAUtils/bin/.*
 relre:^XNAUtils/obj/.*
 glob:UpgradeLog.XML
 relre:^_UpgradeReport_Files/.*
+relre:^Samples/.*/bin/.*
+relre:^Samples/.*/obj/.*
+glob:Samples/Xbox360/App/App/App/App.csproj.Debug.cachefile
