@@ -38,7 +38,7 @@ let txt_save_num =
        Text " Save"  ]
     |> toTextWithIcons
 
-type Component(game, player : PlayerIndex) =
+type Component(game, storage : StorageComponent, player : PlayerIndex) =
     inherit DrawableGameComponent(game)
 
     let mutable renderer : Renderer option = None
@@ -50,7 +50,6 @@ type Component(game, player : PlayerIndex) =
     let mutable num : int = nextRandom()
     let mutable num_str = num.ToString()
 
-    let storage = new StorageComponent(game)
     let container_name = "Data"
     let filename = "data.dat"
 
