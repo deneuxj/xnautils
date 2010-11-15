@@ -43,12 +43,6 @@
     <XnaCompressContent>true</XnaCompressContent>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FSharp.Core">
-      <HintPath>..\..\..\Lib\bin\Xbox 360\Debug\FSharp.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Lib">
-      <HintPath>..\..\..\Lib\bin\Xbox 360\Debug\Lib.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Xna.Framework">
       <Private>False</Private>
     </Reference>
@@ -94,9 +88,6 @@
     <Reference Include="System.Net">
       <Private>False</Private>
     </Reference>
-    <Reference Include="XNAUtils">
-      <HintPath>..\..\..\Lib\bin\Xbox 360\Debug\XNAUtils.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -108,6 +99,14 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\XNAUtils\Xbox 360 Copy of XNAUtils.fsproj">
+      <Project>{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}</Project>
+      <Name>Xbox 360 Copy of XNAUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Lib\Lib.fsproj">
+      <Project>{5ED2E73F-9FA2-4BF3-8E28-77C5A0E2E292}</Project>
+      <Name>Lib</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AppContent\AppContent.contentproj">
       <Name>AppContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
