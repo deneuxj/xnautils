@@ -9,6 +9,7 @@ open Microsoft.Xna.Framework.Input
 
 open XNAUtils.TextIcons
 open XNAUtils.StorageComponent
+open XNAUtils.InputChanges
 
 let idxButtonA = 0
 let idxButtonB = 1
@@ -48,10 +49,12 @@ type Component(game, storage : StorageComponent, player : PlayerIndex) =
     let nextRandom() =
         random.Next(100)
     let mutable num : int = nextRandom()
-    let mutable num_str = num.ToString()
+    let mutable num_str = sprintf "%02d" num
 
     let container_name = "Data"
     let filename = "data.dat"
+
+    let padChanges = new InputChanges(player)
 
     override x.LoadContent() =
         let content = game.Content
@@ -63,37 +66,52 @@ type Component(game, storage : StorageComponent, player : PlayerIndex) =
         
         renderer <-
             let images = [| img_A ; img_B ; img_Back |]
-            let ratios = [| 0.5f ; 0.5f ; 0.5f |]
+            let ratios = [| 1.0f ; 1.0f ; 1.0f |]
             Some (new Renderer(images, ratios, font, 0, 0))
 
     override x.Initialize() =
         storage.RequestUserStorage(player)
         storage.DoUserStorageIO(container_name, filename, System.IO.FileMode.Open, IOAction(x.Load), Action(x.LoadDone), Action<Exception>(x.LoadFailed))
+        base.Initialize()
 
     override x.Update(game_time) =
-        let gamepad = GamePad.GetState(player)
+        padChanges.Update()
 
-        if gamepad.Buttons.A = ButtonState.Pressed then
-            num <- nextRandom()
-        
-        if gamepad.Buttons.B = ButtonState.Pressed then
-            storage.DoUserStorageIO(container_name, filename, System.IO.FileMode.Create, IOAction(x.Save), Action(x.SaveDone), Action<Exception>(x.SaveFailed))
+        if storage.IsReady then
+            if padChanges.IsButtonPress(Buttons.A) then
+                num <- nextRandom()
+                num_str <- sprintf "%02d" num
 
-        if gamepad.Buttons.Back = ButtonState.Pressed then
-            game.Exit()
+            if padChanges.IsButtonPress(Buttons.B) then
+                storage.DoUserStorageIO(container_name, filename, System.IO.FileMode.Create, IOAction(x.Save), Action(x.SaveDone), Action<Exception>(x.SaveFailed))
+
+            if padChanges.IsButtonPress(Buttons.Back) then
+                game.Exit()
 
     override x.Draw(game_time) =
         match renderer, batch with
         | Some renderer, Some batch ->
-            let mutable pos = Vector2(100.0f, 100.0f)
-            let incr = Vector2(0.0f, 100.0f)
-            for txt in [ TextWithIcons.String(num_str, TextWithIcons.Nil) ; txt_new_num ; txt_save_num ; txt_leave] do
-                pos <- renderer.Render(batch, 1.0f, Color.White, pos, txt) + incr
+            if storage.IsReady then
+                let mutable pos = Vector2(100.0f, 100.0f)
+                let incr = Vector2(0.0f, 100.0f)
+                try
+                    batch.Begin()
+                    for txt in [ TextWithIcons.String(num_str, TextWithIcons.Nil) ; txt_new_num ; txt_save_num ; txt_leave] do
+                        renderer.Render(batch, 1.0f, Color.White, pos, txt) |> ignore
+                        pos <- pos + incr
+                finally
+                    batch.End()
+            else
+                try
+                    batch.Begin()
+                    renderer.Render(batch, 1.0f, Color.White, Vector2(100.0f, 100.0f), "Please wait") |> ignore
+                finally
+                    batch.End()
         | _, _ -> ()
 
     member x.Load(stream) =
         num <- stream.ReadByte()
-        num_str <- num.ToString()
+        num_str <-sprintf "%02d" num
 
     member x.LoadDone() = ()
 

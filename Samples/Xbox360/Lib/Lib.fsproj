@@ -30,7 +30,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|Xbox 360' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
+    <Tailcalls>false</Tailcalls>
     <OutputPath>bin\Xbox 360\Release\</OutputPath>
     <DefineConstants>TRACE;XBOX;XBOX360</DefineConstants>
     <WarningLevel>3</WarningLevel>
@@ -45,7 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\FSharp-2.0.0.0\CompactFramework\2.0\bin\FSharp.Core.dll</HintPath>
+      <HintPath>..\..\..\FSharpCore\FSharp.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Xna.Framework">
       <HintPath>$(ProgramFiles(x86))\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.dll</HintPath>

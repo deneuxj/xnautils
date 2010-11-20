@@ -20,22 +20,11 @@ namespace App
         SpriteBatch spriteBatch;
         XNAUtils.Sample.Module1.Component component;
         XNAUtils.StorageComponent.StorageComponent storage;
+        GamerServicesComponent gamerServices;
 
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
-
-            storage = new XNAUtils.StorageComponent.StorageComponent(this);
-
-            // Create the game component from the F# library.
-            // The game will be controlled by the first controller, which is not the correct way to do it.
-            // Rules state that it must be possible to control a game with any controller.
-            // Typically, this is done by having a "press start screen". For the sake of simplicity, we skip this step in this sample.
-            component = new XNAUtils.Sample.Module1.Component(this, storage, PlayerIndex.One);
-
-            base.Components.Add(component);
-            base.Components.Add(storage);
-
             Content.RootDirectory = "Content";
         }
 
@@ -47,7 +36,19 @@ namespace App
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            gamerServices = new GamerServicesComponent(this);
+
+            storage = new XNAUtils.StorageComponent.StorageComponent(this);
+
+            // Create the game component from the F# library.
+            // The game will be controlled by the first controller, which is not the correct way to do it.
+            // Rules state that it must be possible to control a game with any controller.
+            // Typically, this is done by having a "press start screen". For the sake of simplicity, we skip this step in this sample.
+            component = new XNAUtils.Sample.Module1.Component(this, storage, PlayerIndex.One);
+
+            base.Components.Add(gamerServices);
+            base.Components.Add(component);
+            base.Components.Add(storage);
 
             base.Initialize();
         }
