@@ -99,40 +99,44 @@ let doStorageIO
     | Some storage_dev ->
         let thread_state = new RunningThreadState<State>()
         
-        // FIXME: Exception handling. I don't think XNA 4.0 behaves the same way XNA 3.1 did when it comes to what methods throw which exceptions.
         let callback =
             fun (result : IAsyncResult) ->
-                try
-                    use container = storage_dev.EndOpenContainer(result)
-                    if container <> null
+                use container = storage_dev.EndOpenContainer(result)
+                if container <> null
+                then
+                    if mode = FileMode.Open && not(container.FileExists(filename))
                     then
-                        if mode = FileMode.Open && not(container.FileExists(filename))
-                        then
-                            FailedIO(fun () ->
-                                FileNotFoundException(filename)
-                                |> excHandler)
-                            |> thread_state.Complete
-                        else
-                            use stream = container.OpenFile(filename, mode)
+                        FailedIO(fun () ->
+                            FileNotFoundException(filename)
+                            |> excHandler)
+                        |> thread_state.Complete
+                    else
+                        use stream = container.OpenFile(filename, mode)
+                        try
                             operation(stream)
                             SuccessfulIO(completion)
                             |> thread_state.Complete
-                with
-                    | exc ->
-                        match exc with
-                        | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
+                        with
+                        | exc ->
                             FailedIO (fun () -> excHandler(exc))
                             |> thread_state.Complete
-                        | _ -> failwith "Unexpected exception"
             |> fun f -> new AsyncCallback(f)
 
-        storage_dev.BeginOpenContainer(
-            containerName,
-            callback,
-            null)
-        |> ignore
+        try
+            storage_dev.BeginOpenContainer(
+                containerName,
+                callback,
+                null)
+            |> ignore
 
-        { data with state = DoingIO thread_state }
+            { data with state = DoingIO thread_state }
+        with
+        | exc ->
+            match exc with
+            | :? GamerPrivilegeException | :? InvalidOperationException | :? StorageDeviceNotConnectedException ->
+                { data with state = FailedIO(fun () -> excHandler(exc)) }
+                |> setStorageDevice None
+            | _ -> failwith "Unexpected exception"
     
     | _ -> raise (new InvalidOperationException())
 
