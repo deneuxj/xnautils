@@ -184,7 +184,7 @@ let resetDisconnectedStorage (data : Data) =
         userStorage =
             data.userStorage |> Option.bind filter }
 
-let update (dt : GameTime) (data : Data) =
+let update (data : Data) =
     match data.state with        
     | StartReqTitleStorage(completion, failed) when not(Guide.IsVisible) ->
         try
@@ -301,22 +301,34 @@ let update (dt : GameTime) (data : Data) =
             
 type IOAction = delegate of Stream -> unit
 
-type StorageEventArgs(storage : StorageDevice) =
-    inherit EventArgs()
-    
-    member x.StorageDevice = storage
-    
-type StorageEventHandler = EventHandler<StorageEventArgs>
+type IStorageComponent =
+    abstract member IsReady : bool
+    abstract member IsTitleStorageEnabled : bool
+    abstract member IsUserStorageEnabled : bool
+    abstract member RequestTitleStorage : unit -> unit
+    abstract member RequestUserStorage : PlayerIndex -> unit
+    abstract member ResetTitleStorage : unit -> unit
+    abstract member ResetUserStorage : unit -> unit
+    abstract member DoTitleStorageIO : string * FileMode * IOAction * Action * Action<Exception> -> unit
+    abstract member DoUserStorageIO : string * string * FileMode * IOAction * Action * Action<Exception> -> unit
+    abstract member Update : unit -> unit
+    [<CLIEvent>]
+    abstract member TitleStorageAcquired : IEvent<EventArgs>
+    [<CLIEvent>]
+    abstract member TitleStorageLost : IEvent<EventArgs>
+    [<CLIEvent>]
+    abstract member UserStorageAcquired : IEvent<EventArgs>
+    [<CLIEvent>]
+    abstract member UserStorageLost : IEvent<EventArgs>
+
 
 type StorageComponent(game) =
     inherit GameComponent(game)
     let queued_ops : (Data -> Data) CircularQueue = newQueue 4
-    let title_storage_acquired_event = new Control.Event<StorageEventArgs>()
-    let title_storage_not_acquired_event = new Control.Event<EventArgs>()
-    let title_storage_lost_event = new Control.Event<StorageEventArgs>()
-    let user_storage_acquired_event = new Control.Event<StorageEventArgs>()
-    let user_storage_not_acquired_event = new Control.Event<EventArgs>()
-    let user_storage_lost_event = new Control.Event<StorageEventArgs>()
+    let title_storage_acquired_event = new Control.Event<EventArgs>()
+    let title_storage_lost_event = new Control.Event<EventArgs>()
+    let user_storage_acquired_event = new Control.Event<EventArgs>()
+    let user_storage_lost_event = new Control.Event<EventArgs>()
     
     let data = ref { state = Ready ; titleStorage = None ; userStorage = None }
 
@@ -360,13 +372,13 @@ type StorageComponent(game) =
             
     member x.RequestTitleStorage() =
         CircularQueue.add queued_ops (requestTitleStorage
-            (fun storage -> title_storage_acquired_event.Trigger(new StorageEventArgs(storage)))
-            (fun () -> title_storage_not_acquired_event.Trigger(new EventArgs())))
+            (fun storage -> title_storage_acquired_event.Trigger(new EventArgs()))
+            (fun () -> ()))
     
     member x.RequestUserStorage(p : PlayerIndex) =
         CircularQueue.add queued_ops (requestUserStorage
-            (fun storage -> user_storage_acquired_event.Trigger(new StorageEventArgs(storage)))
-            (fun () -> user_storage_not_acquired_event.Trigger(new EventArgs()))
+            (fun storage -> user_storage_acquired_event.Trigger(new EventArgs()))
+            (fun () -> ())
             p)
         
     member x.ResetTitleStorage() =
@@ -381,27 +393,26 @@ type StorageComponent(game) =
     member x.DoUserStorageIO(containerName : string, filename : string, mode : FileMode, operation : IOAction, completionHandler : Action, excHandler : Action<Exception>) =
         CircularQueue.add queued_ops (doUserStorageIO containerName filename mode operation.Invoke completionHandler.Invoke excHandler.Invoke)
         
-    override x.Update(dt : GameTime) =
+    override x.Update(_) = x.Update()
+
+    member x.Update() =
         execQueued()
         
         let bak_user_storage = (!data).userStorage
         let bak_title_storage = (!data).titleStorage
         
-        getDoSet (update dt)
+        getDoSet (update)
     
         match bak_user_storage, (!data).userStorage with
-        | Some storage, None when not (storage.IsConnected) -> user_storage_lost_event.Trigger (new StorageEventArgs(storage))
+        | Some storage, None when not (storage.IsConnected) -> user_storage_lost_event.Trigger (new EventArgs())
         | _ -> ()
         
         match bak_title_storage, (!data).userStorage with
-        | Some storage, None when not (storage.IsConnected) -> title_storage_lost_event.Trigger (new StorageEventArgs(storage))
+        | Some storage, None when not (storage.IsConnected) -> title_storage_lost_event.Trigger (new EventArgs())
         | _ -> ()
          
     [<CLIEvent>]
     member x.TitleStorageAcquired = title_storage_acquired_event.Publish
-    
-    [<CLIEvent>]
-    member x.TitleStorageNotAcquired = title_storage_not_acquired_event.Publish
     
     [<CLIEvent>]
     member x.TitleStorageLost = title_storage_lost_event.Publish
@@ -410,7 +421,24 @@ type StorageComponent(game) =
     member x.UserStorageAcquired = user_storage_acquired_event.Publish
     
     [<CLIEvent>]
-    member x.UserStorageNotAcquired = user_storage_not_acquired_event.Publish
-    
-    [<CLIEvent>]
     member x.UserStorageLost = user_storage_lost_event.Publish
+
+    interface IStorageComponent with
+        member this.IsReady = this.IsReady
+        member this.IsTitleStorageEnabled = this.IsTitleStorageEnabled
+        member this.IsUserStorageEnabled = this.IsUserStorageEnabled
+        member this.RequestTitleStorage() = this.RequestTitleStorage()
+        member this.RequestUserStorage(pi) = this.RequestUserStorage(pi)
+        member this.ResetUserStorage() = this.ResetUserStorage()
+        member this.ResetTitleStorage() = this.ResetTitleStorage()
+        member this.DoTitleStorageIO(filename, mode, operation, completion, excHandler) = this.DoTitleStorageIO(filename, mode, operation, completion, excHandler)
+        member this.DoUserStorageIO(container, filename, mode, operation, completion, excHandler) = this.DoUserStorageIO(container, filename, mode, operation, completion, excHandler)
+        member this.Update() = this.Update()
+        [<CLIEvent>]
+        member this.TitleStorageAcquired = this.TitleStorageAcquired
+        [<CLIEvent>]
+        member this.TitleStorageLost = this.TitleStorageLost
+        [<CLIEvent>]
+        member this.UserStorageAcquired = this.UserStorageAcquired
+        [<CLIEvent>]
+        member this.UserStorageLost = this.UserStorageLost
