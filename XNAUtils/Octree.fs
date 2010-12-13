@@ -1,7 +1,7 @@
 ﻿module XNAUtils.Octree
 
 (*
-Copyright [2010] [Johann Deneux]
+Copyright (C) 2010 Johann Deneux
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,27 +16,31 @@ Copyright [2010] [Johann Deneux]
    limitations under the License.
 *)
 
+
 open Microsoft.Xna.Framework
 open System
 
-type Node<'T> =
-    | Leaf of BoundingBox * int * 'T list  // bounding, list length, list of items
-    | Inner of BoundingBox * Node<'T> array   // Array of 8 items exactly
+type Node<'TS> =
+    { bbox : BoundingBox
+      data : Data<'TS> }
+and Data<'TS> =
+    | Leaf of int * 'TS          // sequence length, sequence of items
+    | Inner of Node<'TS> array   // Array of 8 items exactly
 
 
-let newEmpty<'T> bbox : Node<'T>=
-    Leaf(bbox, 0, [])
+let newEmpty<'T> bbox : Node<'T list>=
+    { bbox = bbox ; data = Leaf(0, []) }
 
 
 [<Struct>]
-type private FloatPair (a : float32, b : float32) =
+type FloatPair (a : float32, b : float32) =
     member x.A = a
     member x.B = b
 
 
-let split intersect node =
-    match node with
-    | Leaf(bbox, count, items) ->
+let inline split intersect (node : Node<'T list>) =
+    match node.data with
+    | Leaf(count, items) ->
         let inline mkBBox (p1 : Vector3) (p2 : Vector3) =
             let prX =
                 if p1.X < p2.X then FloatPair(p1.X, p2.X) else FloatPair(p2.X, p1.X)
@@ -47,8 +51,8 @@ let split intersect node =
             BoundingBox (Vector3 (prX.A, prY.A, prZ.A), Vector3 (prX.B, prY.B, prZ.B))
 
         let sub_bboxes =
-            let center = 0.5f * (bbox.Min + bbox.Max)
-            bbox.GetCorners()
+            let center = 0.5f * (node.bbox.Min + node.bbox.Max)
+            node.bbox.GetCorners()
             |> Array.map (mkBBox center)
 
         let children =
@@ -58,44 +62,49 @@ let split intersect node =
                     items
                     |> List.filter (intersect sub_bbox)
                     
-                Leaf (sub_bbox, List.length in_bbox, in_bbox)
+                { bbox = sub_bbox ; data = Leaf (List.length in_bbox, in_bbox) }
                 )
                                   
-        Inner(bbox, children)
+        { node with data = Inner(children) }
         
-    | Inner _ -> raise (new InvalidOperationException("Cannot split an inner node"))
+    | Inner _ -> raise (new ArgumentException("Cannot split an inner node", "node"))
 
     
-let rec insert max_count max_depth intersect node item depth =
-    assert (
-        match node with
-        | Leaf(bbox, _, _) | Inner(bbox, _) -> intersect bbox item
-    )
+let inline insert max_count max_depth intersect (node : Node<'T list>) item depth =
+    let rec work node item depth =
+        assert (
+            intersect node.bbox item
+        )
     
-    match node with
-    | Leaf(bbox, count, items) when (depth >= max_depth || count < max_count) ->
-        Leaf(bbox, count + 1, item :: items)
-    | Leaf(bbox, count, items) ->
-        split intersect node
-    | Inner(bbox, children) ->
-        Inner(bbox,
-            children
-            |> Array.map (fun child_node ->
-                match child_node with
-                | Leaf(bbox, _, _) | Inner(bbox, _) ->
-                    if intersect bbox item
-                    then insert max_count max_depth intersect child_node item (depth + 1)
-                    else child_node
-                )
-            )
+        match node.data with
+        | Leaf(count, items) when (depth >= max_depth || count < max_count) ->
+            { node with data = Leaf(count + 1, item :: items) }
+        | Leaf(count, items) ->
+            let node' = split intersect node
+            work node' item depth
+        | Inner(children) ->
+            { node with
+                data = Inner(
+                        children
+                        |> Array.map (fun child_node ->                            
+                            if intersect child_node.bbox item
+                            then work child_node item (depth + 1)
+                            else child_node
+                            )
+                        )
+            }
+
+    work node item depth
 
 
-let rec checkIntersection intersectBbox intersectItem node =
-    match node with
-    | Leaf(bbox, _, items) ->
-        intersectBbox bbox &&
-        items |> List.exists intersectItem
-    | Inner(bbox, children) ->
-        intersectBbox bbox &&
-        children |> Array.exists (checkIntersection intersectBbox intersectItem)
+let checkIntersection intersectBbox intersectSomeItem node =
+    let rec work node =
+        intersectBbox node.bbox
+        &&
+        match node.data with
+        | Leaf(_, items) ->
+            intersectSomeItem items
+        | Inner(children) ->
+            children |> ArrayInlined.exists work
         
+    work node
