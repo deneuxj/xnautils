@@ -183,45 +183,57 @@ let resetDisconnectedStorage (data : Data) =
 let update (dt : GameTime) (data : Data) =
     match data.state with        
     | StartReqTitleStorage(completion, failed) when not(Guide.IsVisible) ->
-        let async_res =
-            StorageDevice.BeginShowSelector(
-                (fun _ -> ()), null)
-        { data with state = RequestingTitleStorage (async_res, completion, failed) }
+        try
+            let async_res =
+                StorageDevice.BeginShowSelector(
+                    (fun _ -> ()), null)
+            { data with state = RequestingTitleStorage (async_res, completion, failed) }
+        with
+        | :? GuideAlreadyVisibleException -> data
         
     | StartReqTitleStorage(_, _) ->
         data
         
     | StartReqUserStorage(p, completion, failed) when not(Guide.IsVisible) ->
-        let async_res =
-            StorageDevice.BeginShowSelector(
-                p,
-                (fun _ -> ()), null)
-        { data with state = RequestingUserStorage (async_res, completion, failed) }
+        try
+            let async_res =
+                StorageDevice.BeginShowSelector(
+                    p,
+                    (fun _ -> ()), null)
+            { data with state = RequestingUserStorage (async_res, completion, failed) }
+        with
+        | :? GuideAlreadyVisibleException -> data
         
     | StartReqUserStorage _ ->
         data
         
     | StartSignIn(p, req_storage_completion, req_storage_failed) when not(Guide.IsVisible) ->
-        Guide.ShowSignIn(1, false)
-        { data with state = SigningIn(p, req_storage_completion, req_storage_failed) }
-        
+        try 
+            Guide.ShowSignIn(1, false)
+            { data with state = SigningIn(p, req_storage_completion, req_storage_failed) }
+        with
+        | :? GuideAlreadyVisibleException -> data
+                
     | StartSignIn _ ->
         data
         
     | SigningIn(p, req_storage_completion, req_storage_failed) when not(Guide.IsVisible) ->
         if Gamer.SignedInGamers.[p] = null
         then
-            let async_res =
-                Guide.BeginShowMessageBox(
-                    p,
-                    "Not signed in",
-                    "You must be signed in in order to load and save user settings",
-                    [|"Sign in now"; "Don't sign in"|],
-                    0,
-                    MessageBoxIcon.Alert,
-                    (fun _ -> ()), 
-                    null)
-            { data with state = NotSignedInInfo (async_res, p, req_storage_completion, req_storage_failed) }
+            try
+                let async_res =
+                    Guide.BeginShowMessageBox(
+                        p,
+                        "Not signed in",
+                        "You must be signed in in order to load and save user settings",
+                        [|"Sign in now"; "Don't sign in"|],
+                        0,
+                        MessageBoxIcon.Alert,
+                        (fun _ -> ()), 
+                        null)
+                { data with state = NotSignedInInfo (async_res, p, req_storage_completion, req_storage_failed) }
+            with
+            | :? GuideAlreadyVisibleException -> data
         else
             { data with state = StartReqUserStorage(p, req_storage_completion, req_storage_failed) }
             
