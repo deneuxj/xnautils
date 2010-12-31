@@ -53,12 +53,13 @@
     <None Include="Script.fsx" />
     <Compile Include="ArrayInlined.fs" />
     <Compile Include="TextIcons.fs" />
+    <Compile Include="CircularQueue.fs" />
     <Compile Include="StorageComponent.fs" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="CircularQueue.fs" />
     <Compile Include="JobQueueProcessor.fs" />
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
+    <Compile Include="Heap.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">

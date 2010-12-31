@@ -44,6 +44,7 @@
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
     <Compile Include="InputChanges.fs" />
+    <Compile Include="Heap.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
