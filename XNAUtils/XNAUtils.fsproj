@@ -60,6 +60,7 @@
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
     <Compile Include="Heap.fs" />
+    <None Include="CoopMultiTasking.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">
