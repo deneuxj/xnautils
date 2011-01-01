@@ -138,18 +138,6 @@ type BlockingChannel<'M>() =
 
         
 (* Simulation *)
-let step dt = function
-    | Completed(r) as v -> (v, dt)
-    | Blocked(w, f) ->
-        if dt >= w then
-            (f(), dt - w)
-        else
-            (Blocked(w-dt, f), 0.0f)
-    | Running(f) ->
-        (f(), dt)
-    | Yield(f) ->
-        (Running(f), dt)
-
 let hasCompleted = function
     | Completed _ -> true
     | _ -> false
@@ -161,6 +149,23 @@ let isBlocked = function
 let isRunning = function
     | Running _ -> true
     | _ -> false
+
+let step dt = function
+    | Completed(r) as v -> (v, dt)
+    | Blocked(w, f) ->
+        if dt >= w then
+            (f(), dt - w)
+        else
+            (Blocked(w-dt, f), 0.0f)
+    | Running(_) as s->
+        let mutable s = s
+        while isRunning s do
+            let (Running f) = s
+            s <- f()
+        (s, dt)
+    | Yield(f) ->
+        (Running(f), dt)
+
 
 (* Execution *)
 
@@ -238,15 +243,6 @@ type Scheduler() =
                     
         work dt
 
-let stepUntilBlocked dt ev =
-    let ev, dt = step dt ev
-    let mutable ev = ev
-    let mutable dt = dt
-    while not (isBlocked(ev) || hasCompleted(ev)) do
-        let ev', dt' = step dt ev
-        dt <- dt'
-        ev <- ev'
-    ev
 
 let runAllCompressed evs =
     let mutable state = evs
