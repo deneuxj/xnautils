@@ -47,8 +47,8 @@ let growHeap (heap : Heap<'a>) =
         System.Array.Copy(heap.arr, arr, heap.arr.Length)
         heap.arr <- arr
 
-        
-let (*inline*) insert (cmp : 'a * 'a -> bool) (heap : Heap<'a>) (item : 'a) =
+// cmp(a, b) iff a less or equal than b        
+let insert (cmp : 'a * 'a -> bool) (heap : Heap<'a>) (item : 'a) =
     growHeap heap
     let count' = heap.count + 1
     heap.arr.[heap.count] <- item
@@ -61,7 +61,7 @@ let (*inline*) insert (cmp : 'a * 'a -> bool) (heap : Heap<'a>) (item : 'a) =
                 sift_up root
     sift_up (heap.count - 1)
 
-
+// cmp(a, b) iff a less or equal than b        
 let inline take (cmp : 'a * 'a -> bool) (heap : Heap<'a>) =
     let ret = heap.arr.[0]
     let last = heap.count - 1
