@@ -1,7 +1,6 @@
 ﻿module XNAUtils.CoopMultiTasking
 
-open XNAUtils.Heap
-
+// An extension of the Eventually computation expression as described in the F# spec.
 type Eventually<'R> =
     | Completed of 'R
     | Blocked of float32 * (unit -> Eventually<'R>)
@@ -164,7 +163,7 @@ type BlockingChannel<'M>() =
 
 type Scheduler() =
     // Ordered queue of tasks.
-    let tasks : Heap<Eventually<unit> * int> = newHeap 4
+    let tasks : Heap.Heap<Eventually<unit> * int> = Heap.newHeap 4
 
     // Next id to use for tie-breaks.
     // It's important that tasks with identical priorities are added and picked in a FIFO fashion.
@@ -203,11 +202,11 @@ type Scheduler() =
         t
 
     let insertTask(t) =
-        insert cmp tasks (t, id)
+        Heap.insert cmp tasks (t, id)
         id <- id + 1
 
     let takeTask() =
-        take cmp tasks |> ignore
+        Heap.take cmp tasks |> ignore
 
     member x.AddTask(t) =
         insertTask  t
@@ -263,3 +262,56 @@ let toEventuallyObj ev = task {
     let! res = ev
     return box res
 }
+
+// Allows the parent of a task to request the task to terminate.
+// Also allows the parent to be notified when the task terminates.
+type TaskController internal (kill, killed) =
+    member x.Kill() = kill := true
+    member x.IsDead = !killed
+
+// An "operating system API" to be used from tasks.
+type Environment(scheduler : Scheduler) =
+
+    // Spawn a new concurrent subtask.
+    // The subtask must take a reference to a bool which indicates (when true) when the task should terminate itself.
+    member this.Spawn t =
+        let kill = ref false
+        let killed = ref false
+
+        let once_t = task {
+            do! t kill
+            killed := true
+            do! nextTask()
+        }
+
+        scheduler.AddTask(once_t)
+
+        TaskController(kill, killed)
+
+    // Spawn a new concurrent subtask that will be executed in a loop.
+    member this.SpawnRepeat t =
+        let kill = ref false
+        let killed = ref false
+
+        let repeat_t = task {
+            while not !kill do
+                do! t
+            killed := true
+            do! nextTask()
+        }
+
+        scheduler.AddTask(repeat_t)
+
+        TaskController(kill, killed)
+
+    member this.Wait dt = wait dt
+
+    member this.Yield() = nextTask()
+
+    member this.WaitNextFrame() = nextFrame()
+
+    member this.WaitUntil cond = waitUntil cond
+
+    member this.NewLock() = new Lock()
+
+    member this.NewChannel<'M>() = new BlockingChannel<'M>()
