@@ -46,6 +46,7 @@
     <Compile Include="Octree.fs" />
     <Compile Include="InputChanges.fs" />
     <Compile Include="Heap.fs" />
+    <Compile Include="CoopMultiTasking.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

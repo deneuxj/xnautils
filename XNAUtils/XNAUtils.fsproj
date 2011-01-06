@@ -50,7 +50,6 @@
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="Script.fsx" />
     <Compile Include="ArrayInlined.fs" />
     <Compile Include="TextIcons.fs" />
     <Compile Include="CircularQueue.fs" />
@@ -60,7 +59,9 @@
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
     <Compile Include="Heap.fs" />
+    <Compile Include="CoopMultiTasking.fs" />
     <None Include="CoopMultiTasking.fsx" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">
