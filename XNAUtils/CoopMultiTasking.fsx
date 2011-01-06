@@ -160,40 +160,6 @@ type BlockingChannel<'M>() =
             return ret
         }
 
-        
-(* Simulation *)
-let hasCompleted = function
-    | Completed _ -> true
-    | _ -> false
-
-let isBlocked = function
-    | Blocked _ | Yield _ -> true
-    | _ -> false
-
-let isRunning = function
-    | Running _ -> true
-    | _ -> false
-
-let step dt = function
-    | Completed(r) as v -> (v, dt)
-    | Blocked(w, f) ->
-        if dt >= w then
-            (f(), dt - w)
-        else
-            (Blocked(w-dt, f), 0.0f)
-    | BlockedNextFrame(f) as v -> (v, dt)
-    | Running(_) as s->
-        let mutable s = s
-        while isRunning s do
-            match s with
-            | Running f ->
-                s <- f()
-            | _ -> failwith "Unreachable"
-        (s, dt)
-    | Yield(f) ->
-        (Running(f), dt)
-
-
 (* Execution *)
 
 type Scheduler() =
