@@ -39,6 +39,7 @@
     <Compile Include="TextIcons.fs" />
     <Compile Include="CircularQueue.fs" />
     <Compile Include="StorageComponent.fs" />
+    <Compile Include="StorageComponentGamerServices.fs" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="JobQueueProcessor.fs" />
     <Compile Include="Rumble.fs" />
