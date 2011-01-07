@@ -60,7 +60,9 @@ let rec whileLoop cond body =
         result()
 
 let combine e1 e2 =
-    e1 |> bind (fun () -> e2)
+    match e1 with
+    | Completed _ -> e1
+    | _ -> e1 |> bind (fun _ -> e2)
 
 let using (r : #System.IDisposable) f =
     tryFinally (f r) (fun () -> r.Dispose())

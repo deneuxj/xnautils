@@ -122,3 +122,15 @@ let test6() =
     }
 
     runAllFixed sch 0.1f [| t1 |]
+
+let test7() =
+    let sch = new Scheduler()
+    let sys = new Environment(sch)
+
+    let t1 = task {
+        printfn "0: Start"
+        return()
+        printfn "1: Mau says 'does not happen'"
+    }
+
+    runAllFixed sch 0.1f [| t1 |]
