@@ -47,6 +47,8 @@
     <Compile Include="InputChanges.fs" />
     <Compile Include="Heap.fs" />
     <Compile Include="CoopMultiTasking.fs" />
+    <Compile Include="ScreenManager.fs" />
+    <Compile Include="PressStartScreen.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
