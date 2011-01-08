@@ -3,7 +3,6 @@
 // An extension of the Eventually computation expression as described in the F# spec.
 type Eventually<'R> =
     | Completed of 'R
-    | Returning of 'R
     | Blocked of float32 * (unit -> Eventually<'R>)
     | BlockedNextFrame of (unit -> Eventually<'R>)
     | Running of (unit -> Eventually<'R>)
@@ -11,9 +10,8 @@ type Eventually<'R> =
 
 
 let rec bind k e =
-    printfn "Bind %A %A" k e
     match e with
-    | Completed r | Returning r ->
+    | Completed r ->
         Running(fun () -> k r)
     | Running f ->
         Running(fun () -> f() |> bind k)
@@ -25,26 +23,7 @@ let rec bind k e =
         Yield(fun () -> f() |> bind k)
 
 
-let rec unroll k e =
-    printfn "Unroll %A %A" k e
-    match e with
-    | Completed r ->
-        Running(fun () -> k r)
-    | Returning _ ->
-        e
-    | Running f ->
-        Running(fun () -> f() |> unroll k)
-    | Blocked(dt, f) ->
-        Blocked(dt, fun () -> f() |> unroll k)
-    | BlockedNextFrame f ->
-        BlockedNextFrame(fun () -> f() |> unroll k)
-    | Yield f ->
-        Yield(fun () -> f() |> unroll k)
-
-
 let result r = Completed(r)
-
-let returning r = Returning(r)
 
 let delay f = Running f
 
@@ -60,7 +39,7 @@ let rec catch e handleExc last =
         | Exception e -> handleExc e
 
     match e with
-    | Completed _ | Returning _ -> last(); e
+    | Completed _ -> last(); e
     | Blocked(dt, f) -> Blocked(dt, fun () -> newWork f)
     | BlockedNextFrame f -> BlockedNextFrame(fun () -> newWork f)
     | Running f -> Running(fun() -> newWork f)
@@ -76,18 +55,17 @@ let tryWith e handler =
 let rec whileLoop cond body =
     if cond() then
         body
-        |> unroll (fun () -> whileLoop cond body)
+        |> bind (fun () -> whileLoop cond body)
     else
         result()
 
 let combine e1 e2 =
-    printfn "Combine %A %A" e1 e2
-    match e1 with
-    | Returning r -> Completed r
-    | _ -> e1 |> unroll (fun _ -> e2)
+    e1 |> bind (fun () -> e2)
+
 
 let using (r : #System.IDisposable) f =
     tryFinally (f r) (fun () -> r.Dispose())
+
 
 let forLoop (xs : 'T seq) f =
     using (xs.GetEnumerator()) (fun it ->
@@ -95,15 +73,11 @@ let forLoop (xs : 'T seq) f =
                 (delay (fun () -> it.Current |> f))
         )
 
-let returningFrom r =
-    r |> bind returning
 
 (* The builder type *)
 type TaskBuilder() =
     member x.Bind(e, f) = bind f e
-    // BUG: I could not use return and return!, the assumed semantics don't seem consistent with imperative C-style semantics.
     member x.Return(r) = result r
-    //member x.ReturnFrom(r) = returningFrom r
     member x.Combine(e1, e2) = combine e1 e2
     member x.Delay(f) = delay f
     member x.Zero() = result ()
@@ -129,9 +103,6 @@ let nextFrame () =
 // Stop executing, let some other task execute, if any is ready. Otherwise, we get control back.
 let nextTask () =
     Yield(fun() -> Completed())
-
-let up v =
-    Returning v
 
 // Wait until a specified condition is true.
 // nextTask is always called, then the condition is checked.
@@ -209,27 +180,22 @@ type Scheduler() =
         
         // Tie-breaks        
         | Running _, Running _
-        | Returning _, Returning _
         | Yield _, Yield _
         | Completed _, Completed _ -> n1 <= n2
 
         // Running is minimal
         | Running _, _ -> true
 
-        // ReturningFrom is similar to Running in the sense that it is ready to execute the transition to Completed
-        | Returning _, Running _ -> false
-        | Returning _, _ -> true
-
         // Then comes Yield
-        | Yield _, Running _ | Yield _, Returning _ -> false
+        | Yield _, Running _ -> false
         | Yield _, _ -> true
         
         // BlockedNextFrame before Blocked. RunFor turns these to Blocked(time to next frame, f).
-        | BlockedNextFrame _, Running _ | BlockedNextFrame _, Returning _ | BlockedNextFrame _, Yield _ -> false
+        | BlockedNextFrame _, Running _ |  BlockedNextFrame _, Yield _ -> false
         | BlockedNextFrame _, _ -> true
 
         // Blocked, ordered by time to wake-up.
-        | Blocked _, Running _ | Blocked _, Returning _ | Blocked _, Yield _ | Blocked _, BlockedNextFrame _ -> false
+        | Blocked _, Running _ | Blocked _, Yield _ | Blocked _, BlockedNextFrame _ -> false
         | Blocked (t1, _), Blocked (t2, _) -> t1 < t2 || t1 = t2 && n1 <= n2
         | Blocked _, Completed _ -> true
 
@@ -263,7 +229,7 @@ type Scheduler() =
             for i in 0..tasks.count-1 do
                 tasks.arr.[i] <-
                     match tasks.arr.[i] with
-                    | Yield _, _ | Running _, _ | Returning _, _ | BlockedNextFrame _, _ -> failwith "All tasks should be blocked."
+                    | Yield _, _ | Running _, _ | BlockedNextFrame _, _ -> failwith "All tasks should be blocked."
                     | Blocked (t, f), n -> Blocked (t-delta, f), n
                     | Completed (), _ as v -> v
 
@@ -275,11 +241,6 @@ type Scheduler() =
                 | Yield f | Running f ->
                     takeTask()
                     f()
-                    |> insertTask
-                    work dt
-                | Returning () ->
-                    takeTask()
-                    Completed()
                     |> insertTask
                     work dt
                 | BlockedNextFrame f ->
@@ -355,8 +316,6 @@ type Environment(scheduler : Scheduler) =
     member this.WaitNextFrame() = nextFrame()
 
     member this.WaitUntil cond = waitUntil cond
-
-    member this.Return v = up v
 
     member this.NewLock() = new Lock()
 
