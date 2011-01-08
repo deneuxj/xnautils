@@ -86,11 +86,6 @@ type ScreenManager(game) =
 
     let screens = new List<Screen>()
 
-    // These lists allow users to add screens from code called by Draw().
-    // They are processed in Update.
-    let screens_to_remove = ref []
-    let screens_to_add = ref []
-
     let get_top_screen() =
         if screens.Count > 0 then
             let s = screens.[screens.Count - 1]
@@ -110,13 +105,16 @@ type ScreenManager(game) =
         
         s.LoadContent()
 
+        System.Diagnostics.Debug.WriteLine(sprintf "Screen %s added." (s.GetType().Name))
+
     let remove_screen (s : Screen) =
         match get_top_screen() with
         | None -> ()
         | Some top ->
             if System.Object.ReferenceEquals(s, top) then
                 s.SetIsOnTop(false)
-            screens.Remove(s) |> ignore
+            screens.Remove(s)
+            |> function false -> failwith "Failed to remove screen" | true -> ()
 
         match get_top_screen() with
         | None -> ()
@@ -125,31 +123,23 @@ type ScreenManager(game) =
 
         s.UnloadContent()
 
+        System.Diagnostics.Debug.WriteLine(sprintf "Screen %s removed." (s.GetType().Name))
+
     override this.LoadContent() =
         for s in screens do s.LoadContent()
         base.LoadContent()
 
     override this.Update(gt) =
-        !screens_to_add
-        |> List.rev
-        |> List.iter add_screen
-
-        screens_to_add := []
-
-        !screens_to_remove
-        |> List.rev
-        |> List.iter remove_screen
-
-        screens_to_remove := []
-
         base.Update(gt)
 
     override this.Draw(gt) =
+        // Copy screens, so that s.Draw can modify it while we are iterating over the copy.
+        let screens = screens.ToArray()
         for s in screens do s.Draw(gt)
         base.Draw(gt)
 
     member this.AddScreen(s : Screen) =
-        screens_to_add := s :: !screens_to_add
+        add_screen s
 
     member this.RemoveScreen(s : Screen) =
-        screens_to_remove := s :: !screens_to_remove
+        remove_screen s
