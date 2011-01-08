@@ -14,37 +14,21 @@ type private Resources =
                   batch : SpriteBatch }
 
 
-type PressStartScreen(sys : Environment, fade_in, fade_out, blink, dt) =
+type PressStartScreen(sys : Environment, fade_in, fade_out, blink, delta) =
     inherit ScreenManager.ScreenBase()
 
     let rsc = ref None
     let pos = ref Vector2.Zero
     let txt = "Press start"
 
-    // Set by the task, read by Draw()
-    let light = ref 0.0f    // Used for the fade in/out effects
-    let blink_k = ref 1.0f  // Used for blinking: 0.0f when not visible, 1.0f when visible.
+    let anim = new Animations.FadeInOscillateFadeOut(sys, fade_in, blink, fade_out, delta)
 
     // This task is chopped in blocks and each block is executed by the scheduler each frame (see Main.Update())
     let press_start_task = task {
-        // Fade in
-        for t in 0.0f .. dt .. fade_in do
-            light := t / fade_in
-            do! sys.Wait(dt)
-
         // subtask that makes the "press start" text blink. Executes concurrently
         let blinker =
-            sys.Spawn(fun stop ->
-                task {
-                    while not (!stop) do
-                        blink_k := 0.0f
-                        do! sys.Wait(blink)
-                        //if !stop then return ()
-                        blink_k := 1.0f
-                        do! sys.Wait(blink)
-                        //if !stop then return ()
-                }
-            )
+            sys.Spawn(anim.Task)
+
         // Task to check if a button is pressed. Sets player when that happens.
         let player : PlayerIndex option ref = ref None
         while (!player).IsNone do
@@ -59,11 +43,6 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink, dt) =
         // Stop blinking
         blinker.Kill()
     
-        // Fade out
-        for t in fade_out .. -dt .. 0.0f do
-            light := t / fade_in
-            do! sys.Wait(dt)
-
         // To be nice, wait until the blinker is done.
         // Depending on the blinking period, this could take long as we only check for the kill flag once per blink.
         do! sys.WaitUntil(fun () -> blinker.IsDead)
@@ -78,7 +57,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink, dt) =
     // Exposes press_start_task. Also wraps it in try...with to display stack traces in uncaught exceptions.
     member x.Task =
         task {
-            return!
+            let! p =
                 try
                     press_start_task
                 with
@@ -88,6 +67,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink, dt) =
                         raise e // Raise e again to "crash properly"
                         return PlayerIndex.One // never executed.
                     }
+            return p
         }
 
     // Load the font and create a sprite batch.
@@ -118,7 +98,9 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink, dt) =
         match !rsc with
         | Some r ->
             let color =
-                let k = !light * !blink_k in new Color(k, k, k, k)
+                let blink = if anim.Oscillation >= 0.0f then 1.0f else 0.0f
+                let k = anim.Fade * blink
+                new Color(k, k, k, k)
 
             try
                 r.batch.Begin()
