@@ -46,11 +46,12 @@ type Main(game : Game, screen_manager : ScreenManager) =
                 )
             screen_manager.AddScreen(menu)
             let! action = menu.Task
+            screen_manager.RemoveScreen(menu)
+
             match action with
             | Exit ->
-                screen_manager.RemoveScreen(menu)
                 exit_game := true
-            | _ -> () // TODO
+            | _ -> () // TODO. For now we send back to the press start screen
 
         do! sys.Wait(1.0f)
         game.Exit()
