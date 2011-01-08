@@ -7,8 +7,11 @@ open XNAUtils.ScreenManager
 open XNAUtils.PressStartScreen
 open XNAUtils.MenuScreen
 
+open CoopMultiTaskingSample.GameplayScreen
+
 type MainMenuEntries =
     | Play
+    | Instructions
     | Options
     | Scores
     | Credits
@@ -36,6 +39,7 @@ type Main(game : Game, screen_manager : ScreenManager) =
                     controlling_player,
                     sys,
                     [| Play, "Play now"
+                       Instructions, "How to play"
                        Options, "Options"
                        Scores, "Scores"
                        Credits, "Credits"
@@ -54,6 +58,11 @@ type Main(game : Game, screen_manager : ScreenManager) =
             match action with
             | Exit ->
                 exit_game := true
+            | Play ->
+                use gameplay = new GameplayScreen(sys, controlling_player)
+                screen_manager.AddScreen(gameplay)
+                let! best_time = gameplay.Task
+                screen_manager.RemoveScreen(gameplay)
             | _ -> () // TODO. For now we send back to the press start screen
 
         do! sys.Wait(1.0f)
