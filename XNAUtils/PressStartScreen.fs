@@ -93,6 +93,12 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink, delta) =
 
         pos := new Vector2(float32 x, float32 y)
 
+        base.LoadContent()
+
+    override this.UnloadContent() =
+        rsc := None
+        base.UnloadContent()
+
     // Draw "Press start" centered on the screen.
     override this.Draw _ =
         match !rsc with
