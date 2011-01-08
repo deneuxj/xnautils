@@ -2,6 +2,112 @@
 
 open XNAUtils.CoopMultiTasking
 
+type M =
+    | Delay of (unit -> M)
+    | Bind of M * (unit -> M)
+    | Return of obj
+    | ReturnFrom of M
+    | Combine of M * M
+    | Zero
+    | TryWith of M * (System.Exception -> M)
+    | TryFinally of M * (unit -> unit)
+    | While of (unit -> bool) * M
+    | For of (obj seq) * (obj -> M)
+
+type DummyBuilder() =                
+    member x.Bind(e, f) =
+        Bind(e, f)
+
+    member x.Return(r) =
+        Return r
+
+    member x.ReturnFrom(r) =
+        ReturnFrom r
+
+    member x.Combine(e1, e2) =
+        Combine(e1, e2)
+
+    member x.Delay(f) =
+        Delay f
+
+    member x.Zero() =
+        Zero
+    
+    member x.TryWith(e, h) =
+        TryWith(e, h)
+
+    member x.TryFinally(e, c) =
+        TryFinally(e, c)
+
+    member x.While(cond, body) =
+        While(cond, body)
+
+    member x.For(objs, body) =
+        For(objs, body)
+
+let debug = DummyBuilder()
+
+let rec trace indent m : string list =
+    let wrap (kw : string) (sub : string list) : string list =
+        (sprintf "%sBEGIN %s" indent kw) :: sub @ [sprintf "%sEND %s" indent kw]
+
+    match m with
+    | Delay f ->
+        let f' = f() |> trace (indent + " ")
+        wrap "Delay" f'
+
+    | Bind(e, f) ->
+        let f' = f() |> trace (indent + " ")
+        let e' = e |> trace (indent + " ")
+        wrap "Bind" (("e:" :: e') @ ("fun() ->" :: f'))
+
+    | Combine(e1, e2) ->
+        let e1' = e1 |> trace (indent + " ")
+        let e2' = e2 |> trace (indent + " ")
+        wrap "Combine" (e1' @ e2')
+
+    | Return(v) ->
+        wrap "Return" [sprintf "%s %A" indent v]
+
+    | ReturnFrom(e) ->
+        let e' = e |> trace (indent + " ")
+        wrap "ReturnFrom" e'
+
+    | For(objs, f) ->
+        let objs' = sprintf "%A" objs
+        let f' = f() |> trace (indent + " ")
+        wrap "For" (objs' :: f')
+
+    | TryFinally(e, f) ->
+        e
+        |> trace (indent + " ")
+        |> wrap "TryFinally"
+
+    | TryWith(e, h) ->
+        e
+        |> trace (indent + " ")
+        |> wrap "TryWith"
+
+    | While(cond, body) ->
+        body
+        |> trace (indent + " ")
+        |> wrap "While"
+
+    | Zero -> wrap "Zero" []
+
+
+let f() =
+    let d = debug {
+        while true do
+            do! debug {
+                return 123
+            }
+    }
+
+    let s = trace "" d
+
+    for d in s do printfn "%s" d;;
+
 (* tests *)
 
 let runAllFixed (scheduler : Scheduler) dt evs =
@@ -134,3 +240,61 @@ let test7() =
     }
 
     runAllFixed sch 0.1f [| t1 |]
+
+let test7b() =
+    let sch = new Scheduler()
+    let sys = new Environment(sch)
+
+    let t1 = task {
+        printfn "0: Start"
+        do! sys.Yield()
+        printfn "1: After yield"
+        return()
+        do! sys.Yield()
+        printfn "2: Mau says 'does not happen'"
+        do! sys.Yield()
+    }
+
+    runAllFixed sch 0.1f [| t1 |]
+
+let test8() =
+    let sch = new Scheduler()
+    let sys = new Environment(sch)
+
+    let t1 = task {
+        printfn "0: Start"
+        // return! does not work. Use let! ... return instead.
+        let! r = task { printfn "1: in called task" }
+        //return r
+        printfn "2: Mau says 'does not happen'"
+    }
+
+    runAllFixed sch 0.1f [| t1 |]
+
+let test9() =
+    let sch = new Scheduler()
+    let sys = new Environment(sch)
+
+    let t1 = task.Combine(
+                    task {
+                        printfn "0: First"
+                        do! sys.Yield()
+                    },
+                    task { printfn "1: Mau says 'does not happen'"})
+
+    runAllFixed sch 0.1f [| t1 |]
+
+let test10() =
+    let sch = new Scheduler()
+    let sys = new Environment(sch)
+
+    let t1 = task.Combine(
+                    task {
+                        printfn "0: First"
+                        do! sys.Yield()
+                        do! sys.Return ()
+                    },
+                    task { printfn "1: Second"})
+
+    runAllFixed sch 0.1f [| t1 |]
+    
