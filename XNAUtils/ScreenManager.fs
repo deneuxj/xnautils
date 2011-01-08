@@ -17,7 +17,7 @@ type Screen =
     end
 
 // A screen implementation that provides its own content manager and access to the game object.
-type ScreenBase() =
+type ScreenBase(relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
@@ -25,12 +25,17 @@ type ScreenBase() =
     abstract member SetGame : Game -> unit
     default this.SetGame(new_game) =
         let g, c =
+            let mkContent() =
+                new ContentManager(
+                        new_game.Content.ServiceProvider,
+                        System.IO.Path.Combine(new_game.Content.RootDirectory, relative_content_path))
+
             match !game, !content with
             | Some game, Some content when not (System.Object.ReferenceEquals(game, new_game)) ->
                 content.Unload()
-                new_game, new ContentManager(new_game.Content.ServiceProvider, new_game.Content.RootDirectory)
+                new_game, mkContent()
             | None, None ->
-                new_game, new ContentManager(new_game.Content.ServiceProvider, new_game.Content.RootDirectory)
+                new_game, mkContent()
             | _ -> failwith "Unreachable"
 
         game := Some g

@@ -42,7 +42,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="font.spritefont">
+    <Compile Include="ui\font.spritefont">
       <Name>font</Name>
       <Importer>FontDescriptionImporter</Importer>
       <Processor>FontDescriptionProcessor</Processor>

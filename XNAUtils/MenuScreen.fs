@@ -21,8 +21,8 @@ type PlacementParameters =
        top : float32
        spacing : float32  }
 
-type MenuScreen<'I>(player : PlayerIndex, sys : Environment, items : ('I * string)[], anim : AnimationParameters, placement : PlacementParameters) =
-    inherit ScreenBase()
+type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items : ('I * string)[], anim : AnimationParameters, placement : PlacementParameters) =
+    inherit ScreenBase(content_path)
 
     let rsc = ref None
 

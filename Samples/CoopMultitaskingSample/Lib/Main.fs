@@ -14,6 +14,8 @@ type MainMenuEntries =
     | Credits
     | Exit
 
+let content_path = "ui"
+
 type Main(game : Game, screen_manager : ScreenManager) =
     inherit DrawableGameComponent(game)
 
@@ -23,13 +25,14 @@ type Main(game : Game, screen_manager : ScreenManager) =
     let main_task = task {
         let exit_game = ref false
         while not !exit_game do
-            use press_start = new PressStartScreen(sys, 0.5f, 0.1f, 0.5f, 0.016f)
+            use press_start = new PressStartScreen(content_path, sys, 0.5f, 0.1f, 0.5f, 0.016f)
             screen_manager.AddScreen(press_start)
             let! controlling_player = press_start.Task
             screen_manager.RemoveScreen(press_start)
 
             use menu =
                 new MenuScreen<_>(
+                    content_path,
                     controlling_player,
                     sys,
                     [| Play, "Play now"

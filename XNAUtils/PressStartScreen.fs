@@ -14,8 +14,8 @@ type private Resources =
                   batch : SpriteBatch }
 
 
-type PressStartScreen(sys : Environment, fade_in, fade_out, blink, delta) =
-    inherit ScreenManager.ScreenBase()
+type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink, delta) =
+    inherit ScreenManager.ScreenBase(content_path)
 
     let rsc = ref None
     let pos = ref Vector2.Zero
