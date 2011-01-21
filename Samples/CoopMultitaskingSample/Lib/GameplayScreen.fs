@@ -119,7 +119,7 @@ type GameplayScreen(sys : Environment, player) =
                 do! sys.WaitNextFrame()
             })
         
-        do! sys.WaitUntil(fun () -> input.IsButtonPress(Buttons.A))
+        do! sys.WaitUntil(fun () -> input.IsButtonPress(Buttons.B))
         
         input_updater.Kill()
         blinker.Kill()
@@ -162,7 +162,8 @@ type GameplayScreen(sys : Environment, player) =
                         else
                             sprintf "You were too slow. Your time: %5.2f" !grace_time
 
-                    r.batch.DrawString(r.font, txt, Vector2(100.0f, 100.0f), color)
+                    r.batch.DrawString(r.font, txt, Vector2(100.0f, 100.0f), Color.White)
+                    r.batch.DrawString(r.font, "Press B", Vector2(100.0f, 140.0f), color)
                     
                 else
                     r.batch.DrawString(r.font, sprintf "%d" !target, Vector2(100.0f, 100.0f), Color.White)
