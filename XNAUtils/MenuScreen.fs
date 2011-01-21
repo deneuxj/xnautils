@@ -44,19 +44,23 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
             current := (!current + 1) % num
 
         let selected = ref false
-        while not !selected do
+        let backed = ref false
+        while not (!selected || !backed) do
             input.Update()
 
             if input.IsButtonPress(Buttons.DPadDown) then down()
-            if input.IsButtonPress(Buttons.DPadUp) then up()
-            if input.IsButtonPress(Buttons.A) then selected := true
+            elif input.IsButtonPress(Buttons.DPadUp) then up()
+            elif input.IsButtonPress(Buttons.A) then selected := true
+            elif input.IsButtonPress(Buttons.B) then backed := true
 
-            do! sys.Wait(anim.delta)
+            do! sys.WaitNextFrame()
 
         animator.Kill()
         do! sys.WaitUntil(fun() -> animator.IsDead)
 
-        return items.[!current] |> fst
+        return
+            if !selected then items.[!current] |> fst |> Some
+            else None
     }
 
     member this.Task = my_task

@@ -50,15 +50,16 @@ type Main(game : Game, screen_manager : ScreenManager) =
         screen_manager.RemoveScreen(menu)
 
         match action with
-        | Exit ->
+        | None -> () // Back to press start screen.
+        | Some Exit ->
             exit_game := true
-        | Play ->
+        | Some Play ->
             use gameplay = new GameplayScreen(sys, controlling_player)
             screen_manager.AddScreen(gameplay)
             let! best_time = gameplay.Task
             screen_manager.RemoveScreen(gameplay)
             do! menu_loop exit_game controlling_player
-        | Instructions ->
+        | Some Instructions ->
             use instructions =
                 new TextScreen(content_path, controlling_player, sys,
                                 [| "The game screen shows a number in the upper left corner"
