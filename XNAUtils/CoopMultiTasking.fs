@@ -174,6 +174,8 @@ type Scheduler() =
     // It's important that tasks with identical priorities are added and picked in a FIFO fashion.
     let mutable id = System.Int32.MinValue
 
+    let mutable ticks = ref 0L
+
     // Ordering of tasks in the queue. RunFor repeatedly picks the minimum task.
     let cmp ((ev1, n1), (ev2, n2)) =
         match ev1, ev2 with
@@ -222,6 +224,8 @@ type Scheduler() =
         tasks.arr.[0..tasks.count-1]
         |> Array.exists (function Completed _, _ -> false | _ -> true)
 
+    member x.GetTicks() = !ticks
+
     // Run tasks for the current frame. dt is the frame time (typically 0.016666... on Xbox for 60 fps)
     member x.RunFor(dt) =
         // Let time pass when there are no task ready to be executed.
@@ -262,6 +266,7 @@ type Scheduler() =
                     
         work dt
 
+        ticks := !ticks + int64 (dt * 10000000.0f)
 
 let toEventuallyObj ev = task {
     let! res = ev
@@ -273,6 +278,37 @@ let toEventuallyObj ev = task {
 type TaskController internal (kill, killed) =
     member x.Kill() = kill := true
     member x.IsDead = !killed
+
+// A class offering a subset of the functionalities of System.Diagnostics.Stopwatch which uses the scheduler's time.
+type Stopwatch internal (sch : Scheduler) =
+    let mutable acc = 0L
+    let mutable start = 0L
+    let mutable is_running = false
+
+    member this.Reset() =
+        acc <- 0L
+        is_running <- false
+
+    member this.Start() =
+        if not is_running then
+            is_running <- true
+            start <- sch.GetTicks()
+
+    member this.Stop() =
+        if is_running then
+            is_running <- false
+            acc <- acc + sch.GetTicks() - start
+
+    member this.Elapsed
+        with get() =
+            new System.TimeSpan(
+                acc
+                +
+                if is_running then sch.GetTicks() - start else 0L)
+
+    member this.IsRunning
+        with get() = is_running
+
 
 // An "operating system API" to be used from tasks.
 type Environment(scheduler : Scheduler) =
@@ -320,3 +356,5 @@ type Environment(scheduler : Scheduler) =
     member this.NewLock() = new Lock()
 
     member this.NewChannel<'M>() = new BlockingChannel<'M>()
+
+    member this.NewStopwatch() = new Stopwatch(scheduler)
