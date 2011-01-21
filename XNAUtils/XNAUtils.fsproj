@@ -58,8 +58,13 @@
     <Compile Include="JobQueueProcessor.fs" />
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
+    <Compile Include="InputChanges.fs" />
     <Compile Include="Heap.fs" />
     <Compile Include="CoopMultiTasking.fs" />
+    <Compile Include="Animations.fs" />
+    <Compile Include="ScreenManager.fs" />
+    <Compile Include="PressStartScreen.fs" />
+    <Compile Include="MenuScreen.fs" />
     <None Include="CoopMultiTasking.fsx" />
     <None Include="Script.fsx" />
   </ItemGroup>
