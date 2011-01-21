@@ -75,7 +75,7 @@ type GameplayScreen(sys : Environment, player) =
         for i in 0..2 do
             for j in 0..2 do
                 numbers.[i,j] <- nextNonTarget()
-        let watch = new System.Diagnostics.Stopwatch()
+        let watch = sys.NewStopwatch()
 
         while not !has_missed && not !has_cheated do
             match !target_pos, is_paused() with
