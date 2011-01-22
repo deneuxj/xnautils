@@ -107,7 +107,7 @@ namespace CoopMultiTaskingSample
       try
       {
         spriteBatch.Begin();
-        spriteBatch.DrawString(font, fps.ToString(), new Vector2(550.0f, 50.0f), fps >= 59 ? Color.Green : fps >= 50 ? Color.Yellow : Color.Red);
+        spriteBatch.DrawString(font, fps.ToString(), new Vector2(550.0f, 50.0f), gameTime.IsRunningSlowly ? Color.Red : Color.Green);
       } 
       finally
       {
