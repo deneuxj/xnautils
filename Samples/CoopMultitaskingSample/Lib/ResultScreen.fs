@@ -22,7 +22,7 @@ type ResultScreen(content_path, sys : Environment, player, reason, grace_time, s
 
     let rsc = ref None
     let input = new InputChanges(player)
-    let blink = new XNAUtils.Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.5f, 0.1f, 0.016f)
+    let blink = new XNAUtils.Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.5f, 0.1f)
 
     let rec wait() = task {
         input.Update()

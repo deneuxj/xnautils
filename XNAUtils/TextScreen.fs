@@ -16,7 +16,7 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
 
     let rsc = ref None
 
-    let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f, 0.016f)
+    let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f)
 
     let input = new InputChanges.InputChanges(player)
 

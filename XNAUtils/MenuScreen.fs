@@ -13,8 +13,7 @@ type private Resources =
 
 type AnimationParameters =
     {  period : float32
-       shift : float32
-       delta : float32  }
+       shift : float32  }
 
 type PlacementParameters =
     {  left : float32
@@ -28,7 +27,7 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
 
     let current = ref 0
 
-    let animation = new Animations.MultipleFadeIn(sys, items.Length, anim.period, anim.shift, anim.delta)
+    let animation = new Animations.MultipleFadeIn(sys, items.Length, anim.period, anim.shift)
 
     let input = new InputChanges.InputChanges(player)
 

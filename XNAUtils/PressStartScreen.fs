@@ -14,14 +14,14 @@ type private Resources =
                   batch : SpriteBatch }
 
 
-type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink, delta) =
+type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink) =
     inherit ScreenManager.ScreenBase(content_path)
 
     let rsc = ref None
     let pos = ref Vector2.Zero
     let txt = "Press start"
 
-    let anim = new Animations.FadeInOscillateFadeOut(sys, fade_in, blink, fade_out, delta)
+    let anim = new Animations.FadeInOscillateFadeOut(sys, fade_in, blink, fade_out)
 
     // This task is chopped in blocks and each block is executed by the scheduler each frame (see Main.Update())
     let press_start_task = task {

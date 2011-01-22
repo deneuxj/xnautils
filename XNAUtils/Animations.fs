@@ -3,27 +3,34 @@
 open XNAUtils.CoopMultiTasking
 open Microsoft.Xna.Framework
 
-type FadeInOscillateFadeOut(sys : Environment, fade_in, period, fade_out, delta) =
+type FadeInOscillateFadeOut(sys : Environment, fade_in, period, fade_out) =
     let fade = ref 0.0f
     let osc = ref 0.0f
 
     let my_task stop = task {
         // Fade in
-        for t in 0.0f .. delta .. fade_in do
-            fade := t / fade_in
-            do! sys.Wait(delta)
+        let watch = sys.NewStopwatch()
+        watch.Start()
+        while not (!stop || watch.ElapsedSeconds >= fade_in) do
+            fade := watch.ElapsedSeconds / fade_in
+            do! sys.WaitNextFrame()
+        fade := 1.0f
 
         // Oscillate
         let t = ref 0.0f
+        watch.Reset()
+        watch.Start()
         while not !stop do
-            osc := sin (MathHelper.TwoPi * !t / period)
-            do! sys.Wait(delta)
-            t := !t + delta
+            osc := sin (MathHelper.TwoPi * watch.ElapsedSeconds / period)
+            do! sys.WaitNextFrame()
     
         // Fade out
-        for t in fade_out .. -delta .. 0.0f do
-            fade := t / fade_in
-            do! sys.Wait(delta)
+        watch.Reset()
+        watch.Start()
+        while not (!stop || watch.ElapsedSeconds >= fade_out) do
+            fade := 1.0f - watch.ElapsedSeconds / fade_out
+            do! sys.WaitNextFrame()
+        fade := 0.0f
     }
 
     member this.Task = my_task
@@ -34,18 +41,19 @@ type FadeInOscillateFadeOut(sys : Environment, fade_in, period, fade_out, delta)
 
 
 // An animation which can be used for domino effects or "row of swimmers jumping into the wather one after another".
-type MultipleFadeIn(sys : Environment, num_items, period, shift, delta) =
+type MultipleFadeIn(sys : Environment, num_items, period, shift) =
     let values = Array.create num_items 0.0f
 
     // Wait some time, then fade from 0.0 to 1.0. The value is stored in values at the specified index.
     let delayed_fade_in stop i = task {
         let delay = shift * float32 i
         do! sys.WaitUnless(delay, fun() -> !stop)
-        let t = ref 0.0f
-        while not !stop && !t <= period do
-            values.[i] <- !t / period
-            t := !t + delta
-            do! sys.Wait(delta)
+        let watch = sys.NewStopwatch()
+        watch.Start()
+        while not !stop && watch.ElapsedSeconds <= period do
+            values.[i] <- watch.ElapsedSeconds / period
+            do! sys.WaitNextFrame()
+        values.[i] <- 1.0f
     }
 
     // Execute a number of delayed fade ins concurrently. The delay is increaed by 'shift' for each new fade in.

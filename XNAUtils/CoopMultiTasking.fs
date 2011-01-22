@@ -311,6 +311,11 @@ type Stopwatch internal (sch : Scheduler) =
                 +
                 if is_running then sch.GetTicks() - start else 0L)
 
+    member this.ElapsedSeconds
+        with get() =
+            float32 (acc + if is_running then sch.GetTicks() - start else 0L)
+            / 10000000.0f
+
     member this.IsRunning
         with get() = is_running
 
@@ -362,7 +367,7 @@ type Environment(scheduler : Scheduler) =
         let watch = new Stopwatch(scheduler)
         watch.Start()
         do! nextTask()
-        while not (float32(watch.Elapsed.TotalSeconds) >= dt || cond()) do
+        while not (watch.ElapsedSeconds >= dt || cond()) do
             do! nextFrame()
     }
 
