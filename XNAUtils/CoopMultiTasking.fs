@@ -169,6 +169,7 @@ type BlockingChannel<'M>() =
 type Scheduler() =
     // Ordered queue of tasks.
     let tasks : Heap.Heap<Eventually<unit> * int> = Heap.newHeap 4
+    let blocked_next_frame = ResizeArray<unit -> Eventually<unit>>(4)
 
     // Next id to use for tie-breaks.
     // It's important that tasks with identical priorities are added and picked in a FIFO fashion.
@@ -192,7 +193,7 @@ type Scheduler() =
         | Yield _, Running _ -> false
         | Yield _, _ -> true
         
-        // BlockedNextFrame before Blocked. RunFor turns these to Blocked(time to next frame, f).
+        // BlockedNextFrame before Blocked.
         | BlockedNextFrame _, Running _ |  BlockedNextFrame _, Yield _ -> false
         | BlockedNextFrame _, _ -> true
 
@@ -249,8 +250,8 @@ type Scheduler() =
                     work dt
                 | BlockedNextFrame f ->
                     takeTask()
-                    Blocked(dt, f)
-                    |> insertTask
+                    blocked_next_frame.Add(f)
+                    work dt
                 | Completed () ->
                     takeTask()
                     work dt
@@ -265,6 +266,10 @@ type Scheduler() =
                     ()
                     
         work dt
+        
+        for f in blocked_next_frame do
+            insertTask (Running f)
+        blocked_next_frame.Clear()
 
         ticks := !ticks + int64 (dt * 10000000.0f)
 
