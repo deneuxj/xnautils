@@ -16,3 +16,15 @@ type InputChanges(player : PlayerIndex) =
 
     member x.IsButtonRelease(b : Buttons) =
         oldState.IsButtonUp(b) && newState.IsButtonDown(b)
+
+    // Some typical button presses
+
+    // Start or A: To start a sequence
+    member x.IsStartPressed() =
+        x.IsButtonPress(Buttons.A) || x.IsButtonPress(Buttons.Start)
+
+    // B or Back: To cancel a sequence
+    // Also used to pause before continuing.
+    // Using A is dangerous as it's typically used in the sequence that just ended.
+    member x.IsBackPressed() =
+        x.IsButtonPress(Buttons.B) || x.IsButtonPress(Buttons.Back)
