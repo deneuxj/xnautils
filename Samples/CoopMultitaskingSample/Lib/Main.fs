@@ -38,8 +38,8 @@ type Main(game : Game, screen_manager : ScreenManager) =
                    Scores, "Scores"
                    Credits, "Credits"
                    Exit, "Exit" |],
-                { period = 0.15f
-                  shift = 0.20f
+                { period = 0.2f
+                  shift = 0.05f
                   delta = 0.016f },
                 { left = 300.0f
                   top = 100.0f
