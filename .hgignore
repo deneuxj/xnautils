@@ -9,3 +9,5 @@ glob:Samples/Xbox360/App/App/App.csproj.Debug.cachefile
 glob:Samples/Xbox360/App/App/App.csproj.Release.cachefile
 glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSample.csproj.Debug.cachefile
 glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Debug.cachefile
+glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSample.csproj.Release.cachefile
+glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Release.cachefile
