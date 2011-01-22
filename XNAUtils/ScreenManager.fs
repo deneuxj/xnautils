@@ -17,6 +17,7 @@ type Screen =
     end
 
 // A screen implementation that provides its own content manager and access to the game object.
+[<AbstractClass>]
 type ScreenBase(relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
@@ -42,26 +43,22 @@ type ScreenBase(relative_content_path) =
         content := Some c
 
     abstract member Draw : GameTime -> unit
-    default this.Draw _ = ()
 
     abstract member LoadContent : unit -> unit
-    default this.LoadContent() = ()
     
     abstract member UnloadContent : unit -> unit    
-    default this.UnloadContent() =
-        match !content with
-        | Some content -> content.Unload()
-        | None -> ()
     
-    abstract member SetIsOnTop : bool -> unit    
-    default this.SetIsOnTop b = is_on_top := b
-
     interface Screen with
         member this.SetGame(ng) = this.SetGame(ng)
         member this.Draw(gt) = this.Draw(gt)
         member this.LoadContent() = this.LoadContent()
-        member this.UnloadContent() = this.UnloadContent()
-        member this.SetIsOnTop(b) = this.SetIsOnTop(b)
+        member this.UnloadContent() =
+            this.UnloadContent()
+            match !content with
+            | Some content -> content.Unload()
+            | None -> ()
+
+        member this.SetIsOnTop(b) = is_on_top := b
 
     interface System.IDisposable with
         member this.Dispose() =
