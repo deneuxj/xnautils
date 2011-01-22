@@ -353,6 +353,14 @@ type Environment(scheduler : Scheduler) =
 
     member this.WaitUntil cond = waitUntil cond
 
+    member this.WaitUnless(dt, cond) = task {
+        let watch = new Stopwatch(scheduler)
+        watch.Start()
+        do! nextTask()
+        while not (float32(watch.Elapsed.TotalSeconds) >= dt || cond()) do
+            do! nextFrame()
+    }
+
     member this.NewLock() = new Lock()
 
     member this.NewChannel<'M>() = new BlockingChannel<'M>()
