@@ -97,9 +97,6 @@ type Main(game : Game, screen_manager : ScreenManager) =
             screen_manager.RemoveScreen(press_start)
 
             do! menu_loop exit_game controlling_player
-
-        do! sys.Wait(1.0f)
-        game.Exit()
     }
 
     override this.Initialize() =
@@ -110,6 +107,9 @@ type Main(game : Game, screen_manager : ScreenManager) =
         base.LoadContent()
 
     override this.Update(gt) =
+        if not(scheduler.HasLiveTasks) then
+            game.Exit()
+
         scheduler.RunFor(float32 gt.ElapsedGameTime.TotalSeconds)
 
     override this.Draw(gt) =
