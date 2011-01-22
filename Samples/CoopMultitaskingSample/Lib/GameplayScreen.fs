@@ -143,11 +143,8 @@ type GameplayScreen(sys : Environment, player) =
                 { batch = new SpriteBatch(base.Game.GraphicsDevice)
                   font = font }
         
-        base.LoadContent()
-
     override this.UnloadContent() =
         rsc := None
-        base.UnloadContent()
 
     override this.Draw _ =
         match !rsc with

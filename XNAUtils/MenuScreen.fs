@@ -75,11 +75,8 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
                 { batch = new SpriteBatch(base.Game.GraphicsDevice)
                   font = font }
         
-        base.LoadContent()
-
     override this.UnloadContent() =
         rsc := None
-        base.UnloadContent()
 
     override this.Draw _ =
         match !rsc with

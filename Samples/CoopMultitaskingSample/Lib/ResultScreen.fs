@@ -49,12 +49,9 @@ type ResultScreen(content_path, sys : Environment, player, reason, grace_time, s
         rsc := Some
                 { batch = new SpriteBatch(base.Game.GraphicsDevice)
                   font = font }
-        
-        base.LoadContent()
 
     override this.UnloadContent() =
         rsc := None
-        base.UnloadContent()
 
     override this.Draw _ =
         match !rsc with
