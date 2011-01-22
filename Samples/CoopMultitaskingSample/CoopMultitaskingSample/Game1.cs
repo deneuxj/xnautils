@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 
 using XNAUtils;
+using System.Diagnostics;
 
 namespace CoopMultiTaskingSample
 {
@@ -20,8 +21,14 @@ namespace CoopMultiTaskingSample
   {
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
+    SpriteFont font;
     ScreenManager.ScreenManager screenManager;
     Main.Main mainComponent;
+    
+    Stopwatch fpsWatch = Stopwatch.StartNew();
+    int FPS_SMOOTH = 10;
+    int fpsSmooth = 1;
+    int fps = 0;
 
     public Game1()
     {
@@ -56,6 +63,7 @@ namespace CoopMultiTaskingSample
       spriteBatch = new SpriteBatch(GraphicsDevice);
 
       // TODO: use this.Content to load your game content here
+      font = Content.Load<SpriteFont>("ui\\font");
     }
 
     /// <summary>
@@ -74,12 +82,6 @@ namespace CoopMultiTaskingSample
     /// <param name="gameTime">Provides a snapshot of timing values.</param>
     protected override void Update(GameTime gameTime)
     {
-      // Allows the game to exit
-      if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-        this.Exit();
-
-      // TODO: Add your update logic here
-
       base.Update(gameTime);
     }
 
@@ -89,10 +91,28 @@ namespace CoopMultiTaskingSample
     /// <param name="gameTime">Provides a snapshot of timing values.</param>
     protected override void Draw(GameTime gameTime)
     {
+      if (fpsSmooth == FPS_SMOOTH)
+      {
+        fps = (int)(FPS_SMOOTH / fpsWatch.Elapsed.TotalSeconds);
+        fpsWatch.Reset();
+        fpsWatch.Start();
+        fpsSmooth = 1;
+      }
+      else
+        fpsSmooth++;
+
       GraphicsDevice.Clear(Color.CornflowerBlue);
 
       // TODO: Add your drawing code here
-
+      try
+      {
+        spriteBatch.Begin();
+        spriteBatch.DrawString(font, fps.ToString(), new Vector2(550.0f, 50.0f), fps >= 59 ? Color.Green : fps >= 50 ? Color.Yellow : Color.Red);
+      } 
+      finally
+      {
+        spriteBatch.End();
+      }
       base.Draw(gameTime);
     }
   }
