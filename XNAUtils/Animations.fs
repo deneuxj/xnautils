@@ -40,7 +40,7 @@ type MultipleFadeIn(sys : Environment, num_items, period, shift, delta) =
     // Wait some time, then fade from 0.0 to 1.0. The value is stored in values at the specified index.
     let delayed_fade_in stop i = task {
         let delay = shift * float32 i
-        do! sys.Wait(delay)
+        do! sys.WaitUnless(delay, fun() -> !stop)
         let t = ref 0.0f
         while not !stop && !t <= period do
             values.[i] <- !t / period
