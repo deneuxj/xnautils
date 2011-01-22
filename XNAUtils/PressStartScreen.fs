@@ -40,6 +40,12 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
                     player := Some p
             do! nextFrame()
 
+        // wait until the buttons are depressed, otherwise the next screen may take action too quickly.
+        do! sys.WaitUntil(fun() -> 
+            let state = GamePad.GetState(player.Value.Value)
+            state.Buttons.Start = ButtonState.Released
+            && state.Buttons.A = ButtonState.Released)
+
         // Stop blinking
         blinker.Kill()
     
