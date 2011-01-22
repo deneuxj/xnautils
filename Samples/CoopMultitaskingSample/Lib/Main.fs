@@ -56,8 +56,14 @@ type Main(game : Game, screen_manager : ScreenManager) =
         | Some Play ->
             use gameplay = new GameplayScreen(sys, controlling_player)
             screen_manager.AddScreen(gameplay)
-            let! best_time = gameplay.Task
+            let! reason, grace_time, score = gameplay.Task
             screen_manager.RemoveScreen(gameplay)
+
+            use results = new ResultScreen.ResultScreen(content_path, sys, controlling_player, reason, grace_time, score)
+            screen_manager.AddScreen(results)
+            do! results.Task
+            screen_manager.RemoveScreen(results)
+
             do! menu_loop exit_game controlling_player
         | Some Instructions ->
             use instructions =
