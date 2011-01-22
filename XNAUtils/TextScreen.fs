@@ -16,7 +16,7 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
 
     let rsc = ref None
 
-    let animation = new Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.1f, 0.1f, 0.016f)
+    let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f, 0.016f)
 
     let input = new InputChanges.InputChanges(player)
 
@@ -55,10 +55,13 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
         match !rsc with
         | Some r ->
             try
-                let color = new Color(1.0f, 1.0f, 1.0f, animation.Fade)
+                let color =
+                    let k = animation.Fade
+                    new Color(k, k, k, k)
+
                 r.batch.Begin()
                 lines
-                |> Array.iteri(fun i (txt) ->
+                |> Array.iteri(fun i txt ->
                     let y = placement.top + (float32 i) * placement.spacing
                     let pos = new Vector2(placement.left, y)
                     r.batch.DrawString(r.font, txt, pos, color)
