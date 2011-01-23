@@ -167,111 +167,77 @@ type BlockingChannel<'M>() =
 (* Execution *)
 
 type Scheduler() =
-    // Ordered queue of tasks.
-    let tasks : Heap.Heap<Eventually<unit> * int> = Heap.newHeap 4
+    // Ordered queue of tasks that are waiting (Blocked). The integer indicates the time in ticks when the task will wake up.
+    let waiting : Heap.Heap<(unit -> Eventually<unit>) * int64> = Heap.newHeap 4
+
+    // Circular queue of tasks that are ready to execute (Running, or Yield).
+    let ready : CircularQueue.CircularQueue<unit -> Eventually<unit>> = CircularQueue.newQueue 4
+
+    // Tasks that are waiting until next frame (BlockedNextFrame).
     let blocked_next_frame = ResizeArray<unit -> Eventually<unit>>(4)
 
-    // Next id to use for tie-breaks.
-    // It's important that tasks with identical priorities are added and picked in a FIFO fashion.
-    let mutable id = System.Int32.MinValue
+    let ticks = ref 0L
 
-    let mutable ticks = ref 0L
+    // Ordering of tasks in the waiting queue.
+    let cmp ((ev1, n1), (ev2, n2)) = n1 <= n2
 
-    // Ordering of tasks in the queue. RunFor repeatedly picks the minimum task.
-    let cmp ((ev1, n1), (ev2, n2)) =
-        match ev1, ev2 with
-        
-        // Tie-breaks        
-        | Running _, Running _
-        | Yield _, Yield _
-        | Completed _, Completed _ -> n1 <= n2
+    let peekWaitingTask() =
+        waiting.arr.[0]
 
-        // Running is minimal
-        | Running _, _ -> true
+    let insertWaitingTask(delay, f) =
+        let release = !ticks + int64 (delay * 10000000.0f)
+        Heap.insert cmp waiting (f, release)
 
-        // Then comes Yield
-        | Yield _, Running _ -> false
-        | Yield _, _ -> true
-        
-        // BlockedNextFrame before Blocked.
-        | BlockedNextFrame _, Running _ |  BlockedNextFrame _, Yield _ -> false
-        | BlockedNextFrame _, _ -> true
+    let takeWaitingTask() =
+        Heap.take cmp waiting |> ignore
 
-        // Blocked, ordered by time to wake-up.
-        | Blocked _, Running _ | Blocked _, Yield _ | Blocked _, BlockedNextFrame _ -> false
-        | Blocked (t1, _), Blocked (t2, _) -> t1 < t2 || t1 = t2 && n1 <= n2
-        | Blocked _, Completed _ -> true
-
-        // Completed is maximal
-        | Completed _, _ -> false
-
-    let peekTask() =
-        let t, _ = tasks.arr.[0]
-        t
-
-    let insertTask(t) =
-        Heap.insert cmp tasks (t, id)
-        id <- id + 1
-
-    let takeTask() =
-        Heap.take cmp tasks |> ignore
+    let deltaToTicks dt =
+        int64 (dt * 10000000.0f)
 
     member x.AddTask(t) =
-        insertTask  t
+        match t with
+        | Running f | Yield f -> CircularQueue.add ready f
+        | Blocked(delay, f) -> insertWaitingTask(delay, f)
+        | BlockedNextFrame f -> blocked_next_frame.Add(f)
+        | Completed _ -> ()
     
     member x.HasLiveTasks =
-        tasks.count > 0
-        &&
-        tasks.arr.[0..tasks.count-1]
-        |> Array.exists (function Completed _, _ -> false | _ -> true)
+        waiting.count > 0
+        || ready.len > 0
+        || blocked_next_frame.Count > 0
 
     member x.GetTicks() = !ticks
 
     // Run tasks for the current frame. dt is the frame time (typically 0.016666... on Xbox for 60 fps)
     member x.RunFor(dt) =
-        // Let time pass when there are no task ready to be executed.
-        let decrBlockingTimes delta =
-            for i in 0..tasks.count-1 do
-                tasks.arr.[i] <-
-                    match tasks.arr.[i] with
-                    | Yield _, _ | Running _, _ | BlockedNextFrame _, _ -> failwith "All tasks should be blocked."
-                    | Blocked (t, f), n -> Blocked (t-delta, f), n
-                    | Completed (), _ as v -> v
+        let end_frame = !ticks + deltaToTicks dt
 
-        // Repeatedly pick and execute a task, until there are only blocked tasks left (with a waiting time larger than the time to the next frame).
-        let rec work dt =
-            if dt > 0.0f && tasks.count > 0 then
-                let t = peekTask()
-                match t with
-                | Yield f | Running f ->
-                    takeTask()
-                    f()
-                    |> insertTask
-                    work dt
-                | BlockedNextFrame f ->
-                    takeTask()
-                    blocked_next_frame.Add(f)
-                    work dt
-                | Completed () ->
-                    takeTask()
-                    work dt
-                | Blocked (t, f) when t < dt ->
-                    takeTask()
-                    decrBlockingTimes t
-                    f()
-                    |> insertTask
-                    work (dt - t)
-                | Blocked _ ->
-                    decrBlockingTimes dt
-                    ()
-                    
-        work dt
+        // Execute all tasks that are ready
+        let executeReady() =
+            while not (CircularQueue.isEmpty ready) do
+                let f = CircularQueue.pick ready
+                let t = f()
+                x.AddTask(t)
+
+        // Move waiting tasks that wake up within this frame to the ready queue and execute them
+        let rec executeWaiting()=
+            if !ticks < end_frame && waiting.count > 0 then
+                let (f, release) = peekWaitingTask()
+                if release < end_frame then
+                    ticks := release
+                    takeWaitingTask()
+                    CircularQueue.add ready f
+                    executeReady()
+                    executeWaiting()
         
+        executeReady()
+        executeWaiting()
+
         for f in blocked_next_frame do
-            insertTask (Running f)
+            CircularQueue.add ready f
         blocked_next_frame.Clear()
 
-        ticks := !ticks + int64 (dt * 10000000.0f)
+        ticks := end_frame
 
 let toEventuallyObj ev = task {
     let! res = ev
