@@ -20,10 +20,10 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
 
     let input = new InputChanges.InputChanges(player)
 
-    let my_task = task {
+    member this.Task = task {
         let animator = sys.Spawn(animation.Task)
 
-        while not (input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.A) || input.IsButtonPress(Buttons.Back)) do
+        while not this.IsOnTop || not (input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.A) || input.IsButtonPress(Buttons.Back)) do
             input.Update()
             do! sys.WaitNextFrame()
 
@@ -32,8 +32,6 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
 
         return ()
     }
-
-    member this.Task = my_task
 
     override this.LoadContent() =
         match !rsc with
