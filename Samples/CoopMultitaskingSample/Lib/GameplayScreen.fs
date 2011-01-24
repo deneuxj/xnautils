@@ -283,7 +283,8 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
             elif !has_cheated then TooEarly(!grace_time, int (!score * score_mult))
             else TooLate(!grace_time, int (!score * score_mult))
     }
-        
+
+    // Load a font and create a sprite batch. If a sprite batch was already created, dispose of it.        
     override this.LoadContent() =
         match !rsc with
         | Some r -> r.batch.Dispose()
@@ -293,26 +294,34 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         rsc := Some
                 { batch = new SpriteBatch(base.Game.GraphicsDevice)
                   font = font }
-        
+
+    // Remove the reference to the content, which is detected by the drawing code and prevents
+    // ObjectDisposedException to be raised when content that's been unloaded is used.
     override this.UnloadContent() =
         rsc := None
 
+    // Check if we have some content, in which case we prepare the sprite batch for rendering.
     override this.BeginDrawer() =
         match !rsc with
         | Some r -> r.batch.Begin()
         | None -> ()
         !rsc
 
+    // Finish rendering with the sprite batch. Note that this is not called if we detected we
+    // don't have any content in BeginDrawer.
     override this.EndDrawer(rsc) = rsc.batch.End()
 
+    // Draw the target number in the upper left corner.
     member private this.DrawTarget(rsc : Resources) =
         rsc.batch.DrawString(rsc.font, sprintf "%d" !target, Vector2(100.0f, 100.0f), Color.White)
         rsc
 
+    // Draw "Game over" in place of the target number.
     member private this.DrawGameOver(rsc : Resources) =
         rsc.batch.DrawString(rsc.font, "Game over", Vector2(100.0f, 100.0f), Color.White)
         rsc
 
+    // Draw the matrix.
     member private this.DrawMatrix(rsc : Resources) =
         let left = 200.0f
         let top = 200.0f
