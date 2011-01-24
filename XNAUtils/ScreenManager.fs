@@ -2,6 +2,8 @@
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Content
+open Microsoft.Xna.Framework.Graphics
+
 open System.Collections.Generic
 
 open XNAUtils.CoopMultiTasking
@@ -18,10 +20,17 @@ type Screen =
         abstract member ClearScreenManager : unit -> unit
     end
 
+// Most of the screens in XNAUtils need a couple of fonts and a sprite batch to draw themselves.
+and IUiContentProvider =
+    interface
+        abstract member Font1 : SpriteFont with get
+        abstract member Font2 : SpriteFont with get
+        abstract member SpriteBatch : SpriteBatch with get
+    end
 
 // The screen manager keeps track of screens which must be drawn.
 // It is responsible for telling screens when to load and unload content.
-and ScreenManager(game) =
+and ScreenManager(game, ui_content_provider : IUiContentProvider) =
     inherit DrawableGameComponent(game)
 
     let screens = new List<Screen>()
@@ -83,6 +92,7 @@ and ScreenManager(game) =
 
         System.Diagnostics.Debug.WriteLine(sprintf "Screen %s removed." (s.GetType().Name))
 
+    member this.UiContent = ui_content_provider
 
 // A screen implementation that provides its own content manager and access to the game object.
 [<AbstractClass>]
@@ -173,3 +183,12 @@ type ScreenBase(relative_content_path) =
         match !screen_manager with
         | Some s -> s
         | None -> invalidOp "Screen must be added to a screen manager first"
+
+    member this.Font1 =
+        this.ScreenManager.UiContent.Font1
+
+    member this.Font2 =
+        this.ScreenManager.UiContent.Font2
+
+    member this.SpriteBatch =
+        this.ScreenManager.UiContent.SpriteBatch

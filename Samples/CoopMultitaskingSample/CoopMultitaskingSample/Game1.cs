@@ -19,7 +19,7 @@ namespace CoopMultiTaskingSample
   /// <summary>
   /// This is the main type for your game
   /// </summary>
-  public class Game1 : Microsoft.Xna.Framework.Game
+  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider
   {
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
@@ -50,7 +50,7 @@ namespace CoopMultiTaskingSample
     protected override void Initialize()
     {
       // TODO: Add your initialization logic here
-      screenManager = new ScreenManager.ScreenManager(this);
+      screenManager = new ScreenManager.ScreenManager(this, (ScreenManager.IUiContentProvider)this);
       mainComponent = new Main.Main(this, screenManager);
       base.Components.Add(screenManager);
       base.Components.Add(mainComponent);
@@ -124,6 +124,21 @@ namespace CoopMultiTaskingSample
         spriteBatch.End();
       }
       base.Draw(gameTime);
+    }
+
+    SpriteFont ScreenManager.IUiContentProvider.Font1
+    {
+      get { return font; }
+    }
+
+    SpriteFont ScreenManager.IUiContentProvider.Font2
+    {
+      get { return font; }
+    }
+
+    SpriteBatch ScreenManager.IUiContentProvider.SpriteBatch
+    {
+      get { return spriteBatch; }
     }
   }
 }

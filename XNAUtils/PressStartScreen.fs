@@ -8,16 +8,9 @@ open XNAUtils.CoopMultiTasking
 
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 
-// Graphics resources used by PressStartScreen
-type private Resources =
-                { font : SpriteFont
-                  batch : SpriteBatch }
-
-
 type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink) =
     inherit ScreenManager.ScreenBase(content_path)
 
-    let rsc = ref None
     let pos = ref Vector2.Zero
     let txt = "Press start"
 
@@ -62,22 +55,10 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
     }
 
 
-    // Load the font and create a sprite batch.
-    // Note: Sprite batches must be recreated when their graphics device is reset.
-    // As LoadContent is called whenever that happens, it's a good place to create a SpriteBatch.
     override this.LoadContent() =
-        match !rsc with
-        | Some r -> r.batch.Dispose()
-        | None -> ()
-
-        let font : SpriteFont = base.Content.Load("font")
-        rsc := Some
-                { batch = new SpriteBatch(base.Game.GraphicsDevice)
-                  font = font }
-
-        // Now is also a good time to compute values which depend on the graphics device.
+        // Now is a good time to compute values which depend on the graphics device.
         // Update the position where the text is drawn.
-        let sz = font.MeasureString(txt)
+        let sz = this.Font1.MeasureString(txt)
         let area = base.Game.GraphicsDevice.Viewport.TitleSafeArea
 
         let x = area.Left + (area.Width - int sz.X) / 2
@@ -85,22 +66,17 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
 
         pos := new Vector2(float32 x, float32 y)
 
-    override this.UnloadContent() =
-        rsc := None
+    override this.UnloadContent() = ()
 
     // Draw "Press start" centered on the screen.
     override this.Draw _ =
-        match !rsc with
-        | Some r ->
-            let color =
-                let blink = if anim.Oscillation >= 0.0f then 1.0f else 0.0f
-                let k = anim.Fade * blink
-                new Color(k, k, k, k)
+        let color =
+            let blink = if anim.Oscillation >= 0.0f then 1.0f else 0.0f
+            let k = anim.Fade * blink
+            new Color(k, k, k, k)
 
-            try
-                r.batch.Begin()
-                r.batch.DrawString(r.font, "Press start", !pos, color)                
-            finally
-                r.batch.End()
-
-        | None -> ()
+        try
+            this.SpriteBatch.Begin()
+            this.SpriteBatch.DrawString(this.Font1, "Press start", !pos, color)                
+        finally
+            this.SpriteBatch.End()

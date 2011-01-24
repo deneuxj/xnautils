@@ -7,10 +7,6 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 
-type private Resources =
-                { font : SpriteFont
-                  batch : SpriteBatch }
-
 type AnimationParameters =
     {  period : float32
        shift : float32  }
@@ -22,8 +18,6 @@ type PlacementParameters =
 
 type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items : ('I * string)[], anim : AnimationParameters, placement : PlacementParameters) =
     inherit ScreenBase(content_path)
-
-    let rsc = ref None
 
     let current = ref 0
 
@@ -66,37 +60,23 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
             else None
     }
 
-    override this.LoadContent() =
-        match !rsc with
-        | Some r -> r.batch.Dispose()
-        | None -> ()
-
-        let font : SpriteFont = base.Content.Load("font")
-        rsc := Some
-                { batch = new SpriteBatch(base.Game.GraphicsDevice)
-                  font = font }
-        
-    override this.UnloadContent() =
-        rsc := None
+    override this.LoadContent() = ()
+    override this.UnloadContent() = ()
 
     override this.Draw _ =
-        match !rsc with
-        | Some r ->
-            let default_color = Color.Yellow
-            let selected_color = Color.Red
-            let right = 10.0f + float32 base.Game.GraphicsDevice.Viewport.Width
-            try
-                r.batch.Begin()
-                items
-                |> Array.iteri(fun i (_, txt) ->
-                    let y = placement.top + (float32 i) * placement.spacing
-                    let dst = Vector2(placement.left, y)
-                    let src = Vector2(right, y)
-                    let k = animation.Values(i)
-                    let pos = k * dst + (1.0f - k) * src
-                    r.batch.DrawString(r.font, txt, pos, if i = !current then selected_color else default_color)
-                    )
-            finally
-                r.batch.End()
-
-        | None -> ()
+        let default_color = Color.Yellow
+        let selected_color = Color.Red
+        let right = 10.0f + float32 base.Game.GraphicsDevice.Viewport.Width
+        try
+            this.SpriteBatch.Begin()
+            items
+            |> Array.iteri(fun i (_, txt) ->
+                let y = placement.top + (float32 i) * placement.spacing
+                let dst = Vector2(placement.left, y)
+                let src = Vector2(right, y)
+                let k = animation.Values(i)
+                let pos = k * dst + (1.0f - k) * src
+                this.SpriteBatch.DrawString(this.Font1, txt, pos, if i = !current then selected_color else default_color)
+                )
+        finally
+            this.SpriteBatch.End()
