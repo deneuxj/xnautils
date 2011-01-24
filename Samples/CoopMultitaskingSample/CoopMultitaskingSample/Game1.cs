@@ -24,6 +24,8 @@ namespace CoopMultiTaskingSample
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
     SpriteFont font;
+    Texture2D blankTexture;
+
     ScreenManager.ScreenManager screenManager;
     Main.Main mainComponent;
 #if XBOX360
@@ -73,7 +75,8 @@ namespace CoopMultiTaskingSample
       spriteBatch = new SpriteBatch(GraphicsDevice);
 
       // TODO: use this.Content to load your game content here
-      font = Content.Load<SpriteFont>("ui\\font");
+      font = Content.Load<SpriteFont>(@"ui\font");
+      blankTexture = Content.Load<Texture2D>(@"ui\blank");
     }
 
     /// <summary>
@@ -134,6 +137,11 @@ namespace CoopMultiTaskingSample
     SpriteFont ScreenManager.IUiContentProvider.Font2
     {
       get { return font; }
+    }
+
+    Texture2D ScreenManager.IUiContentProvider.Blank
+    {
+      get { return blankTexture; }
     }
 
     SpriteBatch ScreenManager.IUiContentProvider.SpriteBatch

@@ -25,6 +25,7 @@ and IUiContentProvider =
     interface
         abstract member Font1 : SpriteFont with get
         abstract member Font2 : SpriteFont with get
+        abstract member Blank : Texture2D with get
         abstract member SpriteBatch : SpriteBatch with get
     end
 
@@ -101,7 +102,6 @@ type ScreenBase<'T>(relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
-    let blank_texture : Texture2D option ref = ref None
     let screen_manager : ScreenManager option ref = ref None
     let drawer : ('T -> unit) ref = ref (fun _ -> ())
 
@@ -141,13 +141,13 @@ type ScreenBase<'T>(relative_content_path) =
 
         member this.Draw() =
             if not this.IsOnTop then
-                match !game, !blank_texture with
-                | Some g, Some t ->
+                match !game with
+                | Some g ->
                     let viewport = g.GraphicsDevice.Viewport
                     try
                         this.SpriteBatch.Begin()
                         this.SpriteBatch.Draw(
-                            t,
+                            this.ScreenManager.UiContent.Blank,
                             new Rectangle(0, 0,  viewport.Width, viewport.Height),
                             Color.Black * 0.5f)
                     finally
@@ -164,11 +164,6 @@ type ScreenBase<'T>(relative_content_path) =
 
         member this.LoadContent() =
             this.LoadContent()
-            match !content with
-            | Some c ->
-                blank_texture := Some (c.Load("blank"))
-            | None ->
-                ()
 
         member this.UnloadContent() =
             this.UnloadContent()
