@@ -24,7 +24,7 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
     let anim = new Animations.FadeInOscillateFadeOut(sys, fade_in, blink, fade_out)
 
     // This task is chopped in blocks and each block is executed by the scheduler each frame (see Main.Update())
-    let press_start_task = task {
+    member this.Task = task {
         // subtask that makes the "press start" text blink. Executes concurrently
         let blinker =
             sys.Spawn(anim.Task)
@@ -32,13 +32,14 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
         // Task to check if a button is pressed. Sets player when that happens.
         let player : PlayerIndex option ref = ref None
         while (!player).IsNone do
+            do! sys.WaitUntil(fun () -> this.IsOnTop)
             for p in all_players do
                 let state = GamePad.GetState(p)
                 if state.IsConnected
                     && (state.Buttons.Start = ButtonState.Pressed
                         || state.Buttons.A = ButtonState.Pressed) then
                     player := Some p
-            do! nextFrame()
+            do! sys.WaitNextFrame()
 
         // wait until the buttons are depressed, otherwise the next screen may take action too quickly.
         do! sys.WaitUntil(fun() -> 
@@ -60,21 +61,6 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
             | None -> failwith "Unreachable"
     }
 
-    // Exposes press_start_task. Also wraps it in try...with to display stack traces in uncaught exceptions.
-    member x.Task =
-        task {
-            let! p =
-                try
-                    press_start_task
-                with
-                    e -> task {
-                        // TODO: Show trace
-                        // TODO: wait for button press
-                        raise e // Raise e again to "crash properly"
-                        return PlayerIndex.One // never executed.
-                    }
-            return p
-        }
 
     // Load the font and create a sprite batch.
     // Note: Sprite batches must be recreated when their graphics device is reset.
