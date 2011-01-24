@@ -13,11 +13,12 @@ type private Resources =
                 { font : SpriteFont
                   batch : SpriteBatch }
 
-type GameEndReason =
-    | TooEarly
-    | TooLate
+type GameplayResult =
+    | TooEarly of float * int
+    | TooLate of float * int
+    | Aborted
 
-type ResultScreen(content_path, sys : Environment, player, reason, grace_time, score) =
+type ResultScreen(content_path, sys : Environment, player, reason) =
     inherit ScreenBase(content_path)
 
     let rsc = ref None
@@ -63,15 +64,20 @@ type ResultScreen(content_path, sys : Environment, player, reason, grace_time, s
                 let color = Color(k, k, k, k)
                 let reason_txt =
                     match reason with
-                    | TooEarly -> "You pressed too early"
-                    | TooLate -> "You were too slow"
-
-                let grace_txt = sprintf "Allowed delay: %5.2f" grace_time
-                let score_txt = sprintf "Score: %d" score
+                    | TooEarly _ -> "You pressed too early"
+                    | TooLate _ -> "You were too slow"
+                    | Aborted _ -> "You quit"
 
                 r.batch.DrawString(r.font, reason_txt, Vector2(100.0f, 100.0f), Color.White)
-                r.batch.DrawString(r.font, grace_txt, Vector2(100.0f, 140.0f), Color.White)
-                r.batch.DrawString(r.font, score_txt, Vector2(100.0f, 160.0f), Color.White)
+
+                match reason with
+                | TooLate (grace_time, score) | TooEarly (grace_time, score) ->
+                    let grace_txt = sprintf "Allowed delay: %5.2f" grace_time
+                    let score_txt = sprintf "Score: %d" score
+
+                    r.batch.DrawString(r.font, grace_txt, Vector2(100.0f, 140.0f), Color.White)
+                    r.batch.DrawString(r.font, score_txt, Vector2(100.0f, 160.0f), Color.White)
+                | Aborted -> ()
 
                 r.batch.DrawString(r.font, "Press B", Vector2(100.0f, 200.0f), color)
 

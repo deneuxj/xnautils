@@ -4,7 +4,9 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
+#if XBOX360
 using Microsoft.Xna.Framework.GamerServices;
+#endif
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
@@ -24,6 +26,9 @@ namespace CoopMultiTaskingSample
     SpriteFont font;
     ScreenManager.ScreenManager screenManager;
     Main.Main mainComponent;
+#if XBOX360
+    GamerServicesComponent gamerServices;
+#endif
     
     Stopwatch fpsWatch = Stopwatch.StartNew();
     int FPS_SMOOTH = 10;
@@ -49,6 +54,11 @@ namespace CoopMultiTaskingSample
       mainComponent = new Main.Main(this, screenManager);
       base.Components.Add(screenManager);
       base.Components.Add(mainComponent);
+
+#if XBOX360
+      gamerServices = new GamerServicesComponent(this);
+      base.Components.Add(gamerServices);
+#endif
 
       base.Initialize();
     }

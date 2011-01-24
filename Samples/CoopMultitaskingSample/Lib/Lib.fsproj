@@ -44,6 +44,7 @@
     <None Include="Dependencies\FSharp.Core.optdata" />
     <None Include="Dependencies\FSharp.Core.sigdata" />
     <None Include="Dependencies\FSharp.Core.xml" />
+    <Compile Include="MiscScreens.fs" />
     <Compile Include="ResultScreen.fs" />
     <Compile Include="GameplayScreen.fs" />
     <Compile Include="Main.fs" />

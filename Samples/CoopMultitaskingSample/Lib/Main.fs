@@ -9,6 +9,7 @@ open XNAUtils.MenuScreen
 open XNAUtils.TextScreen
 
 open CoopMultiTaskingSample.GameplayScreen
+open CoopMultiTaskingSample.MiscScreens
 
 type MainMenuEntries =
     | Play
@@ -18,7 +19,6 @@ type MainMenuEntries =
     | Credits
     | Exit
 
-let content_path = "ui"
 
 type Main(game : Game, screen_manager : ScreenManager) =
     inherit DrawableGameComponent(game)
@@ -53,32 +53,19 @@ type Main(game : Game, screen_manager : ScreenManager) =
         | Some Exit ->
             exit_game := true
         | Some Play ->
-            use gameplay = new GameplayScreen(sys, controlling_player)
+            use gameplay = new GameplayScreen(content_path, sys, controlling_player)
             screen_manager.AddScreen(gameplay)
-            let! reason, grace_time, score = gameplay.Task
+            let! gameplay_result = gameplay.Task
             screen_manager.RemoveScreen(gameplay)
 
-            use results = new ResultScreen.ResultScreen(content_path, sys, controlling_player, reason, grace_time, score)
+            use results = new ResultScreen.ResultScreen(content_path, sys, controlling_player, gameplay_result)
             screen_manager.AddScreen(results)
             do! results.Task
             screen_manager.RemoveScreen(results)
 
             do! menu_loop exit_game controlling_player
         | Some Instructions ->
-            use instructions =
-                new TextScreen(content_path, controlling_player, sys,
-                                [| "The game screen shows a number in the upper left corner"
-                                   "and a 3x3 matrix in the middle of the screen."
-                                   "Whenever you see the number in the matrix, press A."
-                                   "You must press A within a delay, otherwise the game ends."
-                                   "The delay decreases the further in the game you go."
-                                   "Pressing A when the number is not in the matrix"
-                                   "ends the game."
-                                   ""
-                                   "Press B to go back to the menu." |],
-                                { left = 100.0f
-                                  top = 100.0f
-                                  spacing = 20.0f })
+            use instructions = mkInstructions controlling_player sys
             screen_manager.AddScreen(instructions)
             do! instructions.Task
             screen_manager.RemoveScreen(instructions)

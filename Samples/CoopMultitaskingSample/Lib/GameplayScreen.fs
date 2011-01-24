@@ -7,6 +7,7 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.InputChanges
+open XNAUtils.MenuScreen
 
 open CoopMultiTaskingSample.ResultScreen
 
@@ -14,9 +15,13 @@ type private Resources =
                 { font : SpriteFont
                   batch : SpriteBatch }
 
+type PauseMenuAction =
+    | ShowInstructions
+    | Abort
+    | Resume
 
-type GameplayScreen(sys : Environment, player) =
-    inherit ScreenBase("ui")
+type GameplayScreen(ui_content_path, sys : Environment, player) =
+    inherit ScreenBase(ui_content_path)
 
     let rsc = ref None
 
@@ -25,7 +30,6 @@ type GameplayScreen(sys : Environment, player) =
     let target_pos = ref None
     let has_missed = ref false
     let has_cheated = ref false
-    let grace_time = ref 5.0
 
     let input = new InputChanges(player)
 
@@ -67,7 +71,44 @@ type GameplayScreen(sys : Environment, player) =
         let n = nextNonTarget()
         numbers.[i, j] <- n
 
-    let play is_paused = task {
+    member private this.ShowPause : Eventually<bool> = task {
+        let rec loop() = task {
+            use menu =
+                new MenuScreen<_>(
+                    ui_content_path,
+                    player,
+                    sys,
+                    [| (ShowInstructions, "How to play") ;
+                       (Resume, "Resume") ;
+                       (Abort, "Abort") |],
+                    { period = 0.2f ; shift = 0.15f },
+                    { left = 300.0f ; top = 100.0f ; spacing = 40.0f })
+            
+            this.ScreenManager.AddScreen(menu)
+            let! action = menu.Task
+            this.ScreenManager.RemoveScreen(menu)
+
+            match action with
+            | Some ShowInstructions ->
+                use instructions = MiscScreens.mkInstructions player sys
+                try
+                    this.ScreenManager.AddScreen(instructions)
+                    do! instructions.Task
+                finally
+                    this.ScreenManager.RemoveScreen(instructions)
+                let! b = loop()
+                return b
+            | None | Some Resume ->
+                return true
+            | Some Abort ->
+                return false
+        }
+
+        let! resume_chosen = loop()
+        return resume_chosen
+    }
+
+    member this.Task = task {
         let swap_period = 0.1f
 
         // Initialisation
@@ -77,61 +118,85 @@ type GameplayScreen(sys : Environment, player) =
                 numbers.[i,j] <- nextNonTarget()
         let watch = sys.NewStopwatch()
         let score = ref 0.0
+        let grace_time = ref 5.0
+        let has_aborted = ref false
 
-        while not !has_missed && not !has_cheated do
-            match !target_pos, is_paused() with
-            | Some _, true -> if watch.IsRunning then watch.Stop()
-            | Some _, false -> if not watch.IsRunning then watch.Start()
+        // Loop until the player misses or presses too early.
+        while not !has_missed && not !has_cheated && not !has_aborted do
+
+            // Start/Stop the stopwatch, depending on whether the target number is visible and the game is paused.
+            match !target_pos, this.IsActive with
+            | Some _, false -> if watch.IsRunning then watch.Stop()
+            | Some _, true -> if not watch.IsRunning then watch.Start()
             | None, _ -> ()
 
-            if watch.Elapsed.TotalSeconds > !grace_time then
-                has_missed := true
+            // Wait until the game is no longer paused (or continue if it's not paused).
+            do! sys.WaitUntil(fun () -> this.IsActive)
+
+            if input.IsButtonPress(Buttons.Start) then
+                // The user pressed start, bring up a pause menu
+                let! resume_chosen = this.ShowPause
+                if not resume_chosen then
+                    has_aborted := true
             else
-                match !target_pos with
-                | None ->
-                    if input.IsButtonPress(Buttons.A) then
-                        has_cheated := true
+                // Has the player missed?
+                if watch.Elapsed.TotalSeconds > !grace_time then
+                    has_missed := true
+                else
+                    // Check if the player presses too early and update the matrix.
+                    match !target_pos with
+                    | None ->
+                        if input.IsButtonPress(Buttons.A) then
+                            has_cheated := true
 
-                    if flipTarget() then
-                        let i, j = rnd.Next(3), rnd.Next(3)
-                        target_pos := Some (i, j)
-                        numbers.[i, j] <- !target
-                        watch.Reset()
-                        watch.Start()
-                    else
+                        // Decide if we make the target number appear in the matrix at some random position...
+                        if flipTarget() then
+                            let i, j = rnd.Next(3), rnd.Next(3)
+                            target_pos := Some (i, j)
+                            numbers.[i, j] <- !target
+                            watch.Reset()
+                            watch.Start()
+                        else
+                            // ... or flip some position in the matrix to a number that is not the target.
+                            distract()
+                    | Some _ ->
+                        // The target is visible and the player presses A:
+                        // - Pick a new target
+                        // - Update the score
+                        // - Lower the grace time by 10%
+                        if input.IsButtonPress(Buttons.A) then
+                            target_pos := None
+                            target := nextTarget()
+                            score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
+                            grace_time := 0.9 * !grace_time
+                            watch.Stop()
+                            watch.Reset()
+
+                        // Flip on some position that does not contain the target number to some random non-target number.
                         distract()
-                | Some _ ->
-                    if input.IsButtonPress(Buttons.A) then
-                        target_pos := None
-                        target := nextTarget()
-                        score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
-                        grace_time := 0.9 * !grace_time
-                        watch.Stop()
-                        watch.Reset()
 
-                    distract()
             do! sys.Wait(swap_period)
             input.Update()
 
-        let input_updater =
-            sys.SpawnRepeat(task {
-                input.Update()
-                do! sys.WaitNextFrame()
-            })
+        if not !has_aborted then
+            let input_updater =
+                sys.SpawnRepeat(task {
+                    input.Update()
+                    do! sys.WaitNextFrame()
+                })
         
-        do! sys.WaitUntil(fun () -> input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.Back))
+            do! sys.WaitUntil(fun () -> not (input.IsButtonPress(Buttons.A)))
         
-        input_updater.Kill()
-        do! sys.WaitUntil(fun () -> input_updater.IsDead)
+            do! sys.WaitUntil(fun () -> input.IsStartPressed())
+        
+            input_updater.Kill()
+            do! sys.WaitUntil(fun () -> input_updater.IsDead)
 
-        let reason =
-            if !has_cheated then TooEarly
-            else TooLate
-        return reason, !grace_time, int (!score * 10000.0)
+        return
+            if !has_aborted then Aborted
+            elif !has_cheated then TooEarly(!grace_time, int (!score * 10000.0))
+            else TooLate(!grace_time, int (!score * 10000.0))
     }
-
-    member this.Task =
-        play (fun() -> not this.IsOnTop)
         
     override this.LoadContent() =
         match !rsc with
