@@ -33,7 +33,7 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
 
     do if items.Length = 0 then invalidArg "items" "items may not be empty"
 
-    let my_task = task {
+    member this.Task = task {
         let animator = sys.Spawn(animation.Task)
 
         let num = items.Length
@@ -45,6 +45,10 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
         let selected = ref false
         let backed = ref false
         while not (!selected || !backed) do
+            // If this screen is not active, i.e. it is not on top or the guide is visible, wait.
+            // We don't want to react to input that's not for us.
+            do! sys.WaitUntil(fun () -> this.IsOnTop)
+
             input.Update()
 
             if input.IsButtonPress(Buttons.DPadDown) then down()
@@ -61,8 +65,6 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
             if !selected then items.[!current] |> fst |> Some
             else None
     }
-
-    member this.Task = my_task
 
     override this.LoadContent() =
         match !rsc with
