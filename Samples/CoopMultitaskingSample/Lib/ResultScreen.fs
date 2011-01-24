@@ -27,7 +27,7 @@ type ResultScreen(content_path, sys : Environment, player, reason) =
 
     let rec wait() = task {
         input.Update()
-        if not (input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.Back)) then
+        if not (input.IsStartPressed()) then
             do! sys.WaitNextFrame()
             do! wait()
     }
@@ -79,7 +79,7 @@ type ResultScreen(content_path, sys : Environment, player, reason) =
                     r.batch.DrawString(r.font, score_txt, Vector2(100.0f, 160.0f), Color.White)
                 | Aborted -> ()
 
-                r.batch.DrawString(r.font, "Press B", Vector2(100.0f, 200.0f), color)
+                r.batch.DrawString(r.font, "Press A", Vector2(100.0f, 200.0f), color)
 
             finally
                 r.batch.End()
