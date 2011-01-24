@@ -101,6 +101,7 @@ type ScreenBase<'T>(relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
+    let blank_texture : Texture2D option ref = ref None
     let screen_manager : ScreenManager option ref = ref None
     let drawer : ('T -> unit) ref = ref (fun _ -> ())
 
@@ -139,6 +140,20 @@ type ScreenBase<'T>(relative_content_path) =
         member this.SetGame(ng) = this.SetGame(ng)
 
         member this.Draw() =
+            if not this.IsOnTop then
+                match !game, !blank_texture with
+                | Some g, Some t ->
+                    let viewport = g.GraphicsDevice.Viewport
+                    try
+                        this.SpriteBatch.Begin()
+                        this.SpriteBatch.Draw(
+                            t,
+                            new Rectangle(0, 0,  viewport.Width, viewport.Height),
+                            Color.Black * 0.5f)
+                    finally
+                        this.SpriteBatch.End()
+                | _ -> ()
+
             match this.BeginDrawer() with
             | Some rsc ->
                 try
@@ -147,7 +162,13 @@ type ScreenBase<'T>(relative_content_path) =
                     this.EndDrawer(rsc)
             | None -> ()
 
-        member this.LoadContent() = this.LoadContent()
+        member this.LoadContent() =
+            this.LoadContent()
+            match !content with
+            | Some c ->
+                blank_texture := Some (c.Load("blank"))
+            | None ->
+                ()
 
         member this.UnloadContent() =
             this.UnloadContent()
