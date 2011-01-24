@@ -8,13 +8,15 @@ open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 
 type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
-    inherit ScreenBase(content_path)
+    inherit ScreenBase<unit>(content_path)
 
     let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f)
 
     let input = new InputChanges.InputChanges(player)
 
     member this.Task = task {
+        this.SetDrawer(this.Drawer)
+
         let animator = sys.Spawn(animation.Task)
 
         while not this.IsOnTop || not (input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.A) || input.IsButtonPress(Buttons.Back)) do
@@ -27,7 +29,11 @@ type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : s
         return ()
     }
 
-    override this.Draw _ =
+    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
+    // We return Some() so that this.Drawer below is called.
+    override this.BeginDrawer() = Some()
+
+    member private this.Drawer() =
         try
             let color =
                 let k = animation.Fade

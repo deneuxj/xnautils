@@ -9,9 +9,9 @@ open XNAUtils.ScreenManager
 open XNAUtils.InputChanges
 
 
-type private Resources =
-                { font : SpriteFont
-                  batch : SpriteBatch }
+type Resources =
+    { font : SpriteFont
+      batch : SpriteBatch }
 
 type GameplayResult =
     | TooEarly of float * int
@@ -19,7 +19,7 @@ type GameplayResult =
     | Aborted
 
 type ResultScreen(content_path, sys : Environment, player, reason) =
-    inherit ScreenBase(content_path)
+    inherit ScreenBase<Resources>(content_path)
 
     let rsc = ref None
     let input = new InputChanges(player)
@@ -33,6 +33,8 @@ type ResultScreen(content_path, sys : Environment, player, reason) =
     }
 
     member this.Task = task {
+        this.SetDrawer(this.Drawer)
+
         let blinker = sys.Spawn(blink.Task)
         
         do! wait()
@@ -54,34 +56,33 @@ type ResultScreen(content_path, sys : Environment, player, reason) =
     override this.UnloadContent() =
         rsc := None
 
-    override this.Draw _ =
+    override this.BeginDrawer() =
         match !rsc with
-        | Some r ->
-            try
-                r.batch.Begin()
-
-                let k = blink.Fade * if blink.Oscillation >= 0.0f then 1.0f else 0.0f
-                let color = Color(k, k, k, k)
-                let reason_txt =
-                    match reason with
-                    | TooEarly _ -> "You pressed too early"
-                    | TooLate _ -> "You were too slow"
-                    | Aborted _ -> "You quit"
-
-                r.batch.DrawString(r.font, reason_txt, Vector2(100.0f, 100.0f), Color.White)
-
-                match reason with
-                | TooLate (grace_time, score) | TooEarly (grace_time, score) ->
-                    let grace_txt = sprintf "Allowed delay: %5.2f" grace_time
-                    let score_txt = sprintf "Score: %d" score
-
-                    r.batch.DrawString(r.font, grace_txt, Vector2(100.0f, 140.0f), Color.White)
-                    r.batch.DrawString(r.font, score_txt, Vector2(100.0f, 160.0f), Color.White)
-                | Aborted -> ()
-
-                r.batch.DrawString(r.font, "Press A", Vector2(100.0f, 200.0f), color)
-
-            finally
-                r.batch.End()
-
+        | Some rsc -> rsc.batch.Begin()
         | None -> ()
+        !rsc
+
+    override this.EndDrawer(rsc) =
+        rsc.batch.End()
+
+    member private this.Drawer(rsc) =
+        let k = blink.Fade * if blink.Oscillation >= 0.0f then 1.0f else 0.0f
+        let color = Color(k, k, k, k)
+        let reason_txt =
+            match reason with
+            | TooEarly _ -> "You pressed too early"
+            | TooLate _ -> "You were too slow"
+            | Aborted _ -> "You quit"
+
+        rsc.batch.DrawString(rsc.font, reason_txt, Vector2(100.0f, 100.0f), Color.White)
+
+        match reason with
+        | TooLate (grace_time, score) | TooEarly (grace_time, score) ->
+            let grace_txt = sprintf "Allowed delay: %5.2f" grace_time
+            let score_txt = sprintf "Score: %d" score
+
+            rsc.batch.DrawString(rsc.font, grace_txt, Vector2(100.0f, 140.0f), Color.White)
+            rsc.batch.DrawString(rsc.font, score_txt, Vector2(100.0f, 160.0f), Color.White)
+        | Aborted -> ()
+
+        rsc.batch.DrawString(rsc.font, "Press A", Vector2(100.0f, 200.0f), color)

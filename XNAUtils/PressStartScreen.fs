@@ -9,7 +9,7 @@ open XNAUtils.CoopMultiTasking
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 
 type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink) =
-    inherit ScreenManager.ScreenBase(content_path)
+    inherit ScreenManager.ScreenBase<unit>(content_path)
 
     let pos = ref Vector2.Zero
     let txt = "Press start"
@@ -18,6 +18,8 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
 
     // This task is chopped in blocks and each block is executed by the scheduler each frame (see Main.Update())
     member this.Task = task {
+        this.SetDrawer(this.Drawer)
+
         // subtask that makes the "press start" text blink. Executes concurrently
         let blinker =
             sys.Spawn(anim.Task)
@@ -68,8 +70,12 @@ type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink)
 
     override this.UnloadContent() = ()
 
+    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
+    // We return Some() so that this.Drawer below is called.
+    override this.BeginDrawer() = Some()
+
     // Draw "Press start" centered on the screen.
-    override this.Draw _ =
+    member private this.Drawer() =
         let color =
             let blink = if anim.Oscillation >= 0.0f then 1.0f else 0.0f
             let k = anim.Fade * blink

@@ -11,7 +11,7 @@ open XNAUtils.CoopMultiTasking
 // Interface of screens as exposed to the ScreenManager
 type Screen =
     interface
-        abstract member Draw : GameTime -> unit
+        abstract member Draw : unit -> unit
         abstract member LoadContent : unit -> unit
         abstract member UnloadContent : unit -> unit
         abstract member SetIsOnTop : bool -> unit
@@ -53,7 +53,7 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
     override this.Draw(gt) =
         // Copy screens, so that s.Draw can modify it while we are iterating over the copy.
         screens_tmp.AddRange(screens)
-        for s in screens_tmp do s.Draw(gt)
+        for s in screens_tmp do s.Draw()
         screens_tmp.Clear()
 
         base.Draw(gt)
@@ -96,12 +96,13 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
 
 // A screen implementation that provides its own content manager and access to the game object.
 [<AbstractClass>]
-type ScreenBase(relative_content_path) =
+type ScreenBase<'T>(relative_content_path) =
 
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
     let screen_manager : ScreenManager option ref = ref None
+    let drawer : ('T -> unit) ref = ref (fun _ -> ())
 
     abstract member SetGame : Game -> unit
     default this.SetGame(new_game) =
@@ -122,7 +123,13 @@ type ScreenBase(relative_content_path) =
         game := Some g
         content := Some c
 
-    abstract member Draw : GameTime -> unit
+    member this.SetDrawer(d) = drawer := d
+
+    abstract member BeginDrawer : unit -> 'T option
+    default this.BeginDrawer() = None
+
+    abstract member EndDrawer : 'T -> unit
+    default this.EndDrawer(_) = ()
 
     abstract member LoadContent : unit -> unit
     
@@ -130,18 +137,31 @@ type ScreenBase(relative_content_path) =
     
     interface Screen with
         member this.SetGame(ng) = this.SetGame(ng)
-        member this.Draw(gt) = this.Draw(gt)
+
+        member this.Draw() =
+            match this.BeginDrawer() with
+            | Some rsc ->
+                try
+                    (!drawer)(rsc)
+                finally
+                    this.EndDrawer(rsc)
+            | None -> ()
+
         member this.LoadContent() = this.LoadContent()
+
         member this.UnloadContent() =
             this.UnloadContent()
             match !content with
             | Some content -> content.Unload()
             | None -> ()
+        
         member this.SetIsOnTop(b) = is_on_top := b
+
         member this.SetScreenManager(s) =
             match !screen_manager with
             | None -> screen_manager := Some s
             | Some _ -> invalidOp "A screen cannot be added to more than one screen manager at a time."
+        
         member this.ClearScreenManager() =
             match !screen_manager with
             | Some _ -> screen_manager := None

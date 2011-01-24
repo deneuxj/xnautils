@@ -11,9 +11,9 @@ open XNAUtils.MenuScreen
 
 open CoopMultiTaskingSample.ResultScreen
 
-type private Resources =
-                { font : SpriteFont
-                  batch : SpriteBatch }
+type Resources =
+    { font : SpriteFont
+      batch : SpriteBatch }
 
 type PauseMenuAction =
     | ShowInstructions
@@ -21,7 +21,7 @@ type PauseMenuAction =
     | Resume
 
 type GameplayScreen(ui_content_path, sys : Environment, player) =
-    inherit ScreenBase(ui_content_path)
+    inherit ScreenBase<Resources>(ui_content_path)
 
     let rsc = ref None
 
@@ -121,6 +121,9 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         let grace_time = ref 5.0
         let has_aborted = ref false
 
+        // Draw the target and the matrix
+        this.SetDrawer(this.DrawTarget >> this.DrawMatrix)
+
         // Loop until the player misses or presses too early.
         while not !has_missed && not !has_cheated && not !has_aborted do
 
@@ -188,6 +191,9 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
 
         // Wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
+            // Draw "Game over" instead of the target
+            this.SetDrawer(this.DrawGameOver >> this.DrawMatrix)
+
             let input_updater =
                 sys.SpawnRepeat(task {
                     input.Update()
@@ -220,28 +226,28 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
     override this.UnloadContent() =
         rsc := None
 
-    override this.Draw _ =
+    override this.BeginDrawer() =
         match !rsc with
-        | Some r ->
-            try
-                r.batch.Begin()
-                
-                if !has_cheated || !has_missed then
-                    r.batch.DrawString(r.font, "Game over", Vector2(100.0f, 100.0f), Color.White)
-                    
-                else
-                    r.batch.DrawString(r.font, sprintf "%d" !target, Vector2(100.0f, 100.0f), Color.White)
-
-                let left = 200.0f
-                let top = 200.0f
-                let spacing = 50.0f
-
-                for i in 0..2 do
-                    for j in 0..2 do
-                        let pos = Vector2(left + (float32 i) * spacing, top + (float32 j) * spacing)
-                        r.batch.DrawString(r.font, sprintf "%d" numbers.[i,j], pos, Color.White)
-
-            finally
-                r.batch.End()
-
+        | Some r -> r.batch.Begin()
         | None -> ()
+        !rsc
+
+    override this.EndDrawer(rsc) = rsc.batch.End()
+
+    member private this.DrawTarget(rsc : Resources) =
+        rsc.batch.DrawString(rsc.font, sprintf "%d" !target, Vector2(100.0f, 100.0f), Color.White)
+        rsc
+
+    member private this.DrawGameOver(rsc : Resources) =
+        rsc.batch.DrawString(rsc.font, "Game over", Vector2(100.0f, 100.0f), Color.White)
+        rsc
+
+    member private this.DrawMatrix(rsc : Resources) =
+        let left = 200.0f
+        let top = 200.0f
+        let spacing = 50.0f
+
+        for i in 0..2 do
+            for j in 0..2 do
+                let pos = Vector2(left + (float32 i) * spacing, top + (float32 j) * spacing)
+                rsc.batch.DrawString(rsc.font, sprintf "%d" numbers.[i,j], pos, Color.White)

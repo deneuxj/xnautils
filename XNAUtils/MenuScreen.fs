@@ -17,7 +17,7 @@ type PlacementParameters =
        spacing : float32  }
 
 type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items : ('I * string)[], anim : AnimationParameters, placement : PlacementParameters) =
-    inherit ScreenBase(content_path)
+    inherit ScreenBase<unit>(content_path)
 
     let current = ref 0
 
@@ -28,6 +28,8 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
     do if items.Length = 0 then invalidArg "items" "items may not be empty"
 
     member this.Task = task {
+        this.SetDrawer(this.Drawer)
+
         let animator = sys.Spawn(animation.Task)
 
         let num = items.Length
@@ -63,7 +65,11 @@ type MenuScreen<'I>(content_path, player : PlayerIndex, sys : Environment, items
     override this.LoadContent() = ()
     override this.UnloadContent() = ()
 
-    override this.Draw _ =
+    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
+    // We return Some() so that this.Drawer below is called.
+    override this.BeginDrawer() = Some()
+
+    member private this.Drawer() =
         let default_color = Color.Yellow
         let selected_color = Color.Red
         let right = 10.0f + float32 base.Game.GraphicsDevice.Viewport.Width
