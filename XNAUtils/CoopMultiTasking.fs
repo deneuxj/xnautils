@@ -220,7 +220,7 @@ type Scheduler() =
                 x.AddTask(t)
 
         // Move waiting tasks that wake up within this frame to the ready queue and execute them
-        let rec executeWaiting()=
+        let rec executeWaiting() =
             if !ticks < end_frame && waiting.count > 0 then
                 let (f, release) = peekWaitingTask()
                 if release < end_frame then
