@@ -28,14 +28,13 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
     let numbers = Array2D.create 3 3 0
     let target = ref 0
     let target_pos = ref None
-    let has_missed = ref false
-    let has_cheated = ref false
     let score_mult = 10000.0
 
     let input = new InputChanges(player)
 
     let rnd = new System.Random()
-    
+
+    // Get a random number which is not currently visible in the matrix.    
     let rec nextTarget() =
         let n = rnd.Next(100)
         let exists =
@@ -51,6 +50,7 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         else
             n
 
+    // Get a random number which is not the target.
     let rec nextNonTarget() =
         let n = rnd.Next(100)
         if n <> !target then
@@ -58,45 +58,56 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         else
             nextNonTarget()
 
+    // Get a position for the target number (must be different from the current position).
     let rec nextNonTargetPos() =
         let i, j = rnd.Next(3), rnd.Next(3)
         match !target_pos with
         | Some pos when pos = (i, j) -> nextNonTargetPos()
         | _ -> (i, j)
 
+    // A function indicating if it is time to make the target visible.
     let flipTarget() =
         rnd.Next(10) = 0
 
+    // Change the value of some number not in the target position to some value different from the target.
     let distract() =
         let i, j = nextNonTargetPos()
         let n = nextNonTarget()
         numbers.[i, j] <- n
 
+    // Show a pause menu that allows to read this instruction or abort.
     member private this.ShowPause : Eventually<bool> = task {
+        // Create the menu screen.
+        use menu =
+            new MenuScreen<_>(
+                ui_content_path,
+                player,
+                sys,
+                [| (ShowInstructions, "How to play") ;
+                    (Resume, "Resume") ;
+                    (Abort, "Abort") |],
+                { period = 0.2f ; shift = 0.15f },
+                { left = 300.0f ; top = 100.0f ; spacing = 40.0f })
+
         let rec loop() = task {
-            use menu =
-                new MenuScreen<_>(
-                    ui_content_path,
-                    player,
-                    sys,
-                    [| (ShowInstructions, "How to play") ;
-                       (Resume, "Resume") ;
-                       (Abort, "Abort") |],
-                    { period = 0.2f ; shift = 0.15f },
-                    { left = 300.0f ; top = 100.0f ; spacing = 40.0f })
-            
+            // Show the menu screen and wait for the user to select an entry or cancel.
             this.ScreenManager.AddScreen(menu)
             let! action = menu.Task
+            // Hide the menu
             this.ScreenManager.RemoveScreen(menu)
 
+            // Take the action corresponding to the selected entry, if any.
+            // Cancelling the menu has the same effect as choosing "Resume".
             match action with
             | Some ShowInstructions ->
+                // Create an instructions screen
                 use instructions = MiscScreens.mkInstructions player sys
-                try
-                    this.ScreenManager.AddScreen(instructions)
-                    do! instructions.Task
-                finally
-                    this.ScreenManager.RemoveScreen(instructions)
+                // Show it
+                this.ScreenManager.AddScreen(instructions)
+                // Wait for the user to exit it.
+                do! instructions.Task
+                // Hide the screen.
+                this.ScreenManager.RemoveScreen(instructions)
                 let! b = loop()
                 return b
             | None | Some Resume ->
@@ -109,6 +120,7 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         return resume_chosen
     }
 
+    // A task that creates a "rolling digit" effect for the score.
     member private this.UpdateScore old_score new_score duration killed = task {
         let watch = sys.NewStopwatch()
         let score = ref old_score
@@ -134,6 +146,7 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
 
     }
 
+    // The main task for this screen.
     member this.Task = task {
         let swap_period = 0.1f
 
@@ -145,6 +158,8 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         let watch = sys.NewStopwatch()
         let score = ref 0.0
         let grace_time = ref 5.0
+        let has_missed = ref false
+        let has_cheated = ref false
         let has_aborted = ref false
         let score_updater =
             sys.Spawn(this.UpdateScore 0.0 0.0 0.0)
@@ -161,8 +176,8 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
             >> this.DrawTarget
             >> this.DrawMatrix)
 
-        // Loop until the player misses or presses too early.
-        while not !has_missed && not !has_cheated && not !has_aborted do
+        // Loop until the player loses or aborts.
+        while not (!has_missed || !has_cheated || !has_aborted) do
 
             // Start/Stop the stopwatch, depending on whether the target number is visible and the game is paused.
             match !target_pos, this.IsActive with
@@ -243,7 +258,12 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         // Wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
             // Draw "Game over" instead of the target
-            this.SetDrawer(this.DrawGameOver >> this.DrawMatrix)
+            this.SetDrawer(
+                fun (rsc) ->
+                    rsc.batch.DrawString(rsc.font, sprintf "%d" (int (!score * score_mult)), Vector2(500.0f, 100.0f), Color.White)
+                    rsc            
+                >> this.DrawGameOver
+                >> this.DrawMatrix)
 
             let input_updater =
                 sys.SpawnRepeat(task {
