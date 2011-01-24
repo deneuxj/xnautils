@@ -52,6 +52,7 @@
     <Compile Include="PressStartScreen.fs" />
     <Compile Include="MenuScreen.fs" />
     <Compile Include="TextScreen.fs" />
+    <Compile Include="StorageTasks.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
