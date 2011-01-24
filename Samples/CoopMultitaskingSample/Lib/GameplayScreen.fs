@@ -135,9 +135,17 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
 
             if input.IsButtonPress(Buttons.Start) then
                 // The user pressed start, bring up a pause menu
+                // First stop the timer.
+                let was_running = watch.IsRunning
+                watch.Stop()
+
                 let! resume_chosen = this.ShowPause
                 if not resume_chosen then
                     has_aborted := true
+                
+                // Resume the timer if it was running when we stopped it.
+                if was_running then watch.Start()
+
             else
                 // Has the player missed?
                 if watch.Elapsed.TotalSeconds > !grace_time then
@@ -178,6 +186,7 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
             do! sys.Wait(swap_period)
             input.Update()
 
+        // Wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
             let input_updater =
                 sys.SpawnRepeat(task {
