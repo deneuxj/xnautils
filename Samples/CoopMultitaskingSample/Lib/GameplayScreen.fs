@@ -30,6 +30,7 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
     let target_pos = ref None
     let has_missed = ref false
     let has_cheated = ref false
+    let score_mult = 10000.0
 
     let input = new InputChanges(player)
 
@@ -108,6 +109,31 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         return resume_chosen
     }
 
+    member private this.UpdateScore old_score new_score duration killed = task {
+        let watch = sys.NewStopwatch()
+        let score = ref old_score
+        watch.Start()
+
+        // Draw the score, the target and the matrix
+        // Note that it's possible to embedd rendering code inside the update code,
+        // which is used here for rendering the score.
+        this.SetDrawer(
+            fun (rsc) ->
+                rsc.batch.DrawString(rsc.font, sprintf "%d" (int !score), Vector2(500.0f, 100.0f), Color.White)
+                rsc
+            >> this.DrawTarget
+            >> this.DrawMatrix)
+
+        while watch.Elapsed.TotalSeconds < duration && not !killed do
+            if not(this.IsActive) && watch.IsRunning then
+                watch.Stop()
+            elif this.IsActive && not(watch.IsRunning) then
+                watch.Start()
+            score := score_mult * (old_score + (new_score - old_score) * watch.Elapsed.TotalSeconds / duration)
+            do! sys.WaitNextFrame()
+
+    }
+
     member this.Task = task {
         let swap_period = 0.1f
 
@@ -120,9 +146,20 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         let score = ref 0.0
         let grace_time = ref 5.0
         let has_aborted = ref false
+        let score_updater =
+            sys.Spawn(this.UpdateScore 0.0 0.0 0.0)
+            |> Some
+            |> ref
 
-        // Draw the target and the matrix
-        this.SetDrawer(this.DrawTarget >> this.DrawMatrix)
+        // Draw the score, the target and the matrix
+        // Note that it's possible to embedd rendering code inside the update code,
+        // which is used here for rendering the score.
+        this.SetDrawer(
+            fun (rsc) ->
+                rsc.batch.DrawString(rsc.font, sprintf "%d" (int !score), Vector2(500.0f, 100.0f), Color.White)
+                rsc
+            >> this.DrawTarget
+            >> this.DrawMatrix)
 
         // Loop until the player misses or presses too early.
         while not !has_missed && not !has_cheated && not !has_aborted do
@@ -178,10 +215,24 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
                         if input.IsButtonPress(Buttons.A) then
                             target_pos := None
                             target := nextTarget()
+                            let old_score = !score
                             score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
                             grace_time := 0.9 * !grace_time
                             watch.Stop()
                             watch.Reset()
+
+                            // Start rolling up the score.
+                            match !score_updater with
+                            | Some ctrl ->
+                                // Already rolling, kill the on-going rolling effect.
+                                ctrl.Kill()
+                                // No need to wait until the on-going rolling effect is dead.
+                                // The worst that might happen is that we can get two effects
+                                // active during one frame, which is harmless.
+                                // do! sys.WaitUntil(fun() -> ctrl.IsDead)
+                            | None -> ()
+                            // Spawn a new score rolling effect.
+                            score_updater := sys.Spawn(this.UpdateScore old_score !score 1.0) |> Some
 
                         // Flip on some position that does not contain the target number to some random non-target number.
                         distract()
@@ -209,8 +260,8 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
 
         return
             if !has_aborted then Aborted
-            elif !has_cheated then TooEarly(!grace_time, int (!score * 10000.0))
-            else TooLate(!grace_time, int (!score * 10000.0))
+            elif !has_cheated then TooEarly(!grace_time, int (!score * score_mult))
+            else TooLate(!grace_time, int (!score * score_mult))
     }
         
     override this.LoadContent() =
