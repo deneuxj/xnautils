@@ -9,6 +9,7 @@ open XNAUtils.MenuScreen
 open XNAUtils.TextScreen
 
 open CoopMultiTaskingSample.GameplayScreen
+open CoopMultiTaskingSample.ResultScreen
 open CoopMultiTaskingSample.MiscScreens
 
 type MainMenuEntries =
@@ -58,10 +59,13 @@ type Main(game : Game, screen_manager : ScreenManager) =
             let! gameplay_result = gameplay.Task
             screen_manager.RemoveScreen(gameplay)
 
-            use results = new ResultScreen.ResultScreen(content_path, sys, controlling_player, gameplay_result)
-            screen_manager.AddScreen(results)
-            do! results.Task
-            screen_manager.RemoveScreen(results)
+            match gameplay_result with
+            | Aborted _ -> ()
+            | _ ->
+                use results = new ResultScreen(content_path, sys, controlling_player, gameplay_result)
+                screen_manager.AddScreen(results)
+                do! results.Task
+                screen_manager.RemoveScreen(results)
 
             do! menu_loop exit_game controlling_player
         | Some Instructions ->
