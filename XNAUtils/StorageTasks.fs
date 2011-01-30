@@ -98,17 +98,25 @@ let saveXml<'T> filename (data : 'T) (container : StorageContainer) =
     | :? StorageDeviceNotConnectedException ->
         None
 
+let unpersonalAlert(title, text) =
+    Guide.BeginShowMessageBox(title, text, ["Yes"; "No"], 0, MessageBoxIcon.Warning, null, null)
+
+let personalAlert player (title, text) =
+    Guide.BeginShowMessageBox(player, title, text, ["Yes"; "No"], 0, MessageBoxIcon.Warning, null, null)
+
+let info text =
+    Guide.BeginShowMessageBox("Information", text, ["OK"], 0, MessageBoxIcon.None, null, null)
+    |> ignore
+
+let error text =
+    Guide.BeginShowMessageBox("Error", text, ["OK"], 0, MessageBoxIcon.Error, null, null)
+    |> ignore
+
 type Storage(use_player_storage) =
     let device = ref None
     let player_device = ref None
     let maybe_player = ref None
     let is_busy = ref false
-
-    let unpersonalAlert(title, text) =
-        Guide.BeginShowMessageBox(title, text, ["Yes"; "No"], 0, MessageBoxIcon.Warning, null, null)
-
-    let personalAlert player (title, text) =
-        Guide.BeginShowMessageBox(player, title, text, ["Yes"; "No"], 0, MessageBoxIcon.Warning, null, null)
 
     let titleAlert =
         match !maybe_player with
@@ -189,7 +197,9 @@ type Storage(use_player_storage) =
                     let! dev = getStorageDevice
                     match dev with
                     | Some dev -> device := Some dev
-                    | None -> device := None
+                    | None -> ()
+                else
+                    device := None
         | None -> () // No device was chosen, which means we haven't lost it!
     }
 
@@ -208,15 +218,16 @@ type Storage(use_player_storage) =
                     let! dev = getUserStorageDevice player
                     match dev with
                     | Some dev -> player_device := Some dev
-                    | None -> player_device := None
+                    | None -> ()
+                else
+                    player_device := None
         | None -> () // No device was chosen, which means we haven't lost it!
     }
 
-    member this.DoTitleStorage container_name f = task {
+    member this.DoTitleStorage(container_name, f) = task {
         match !device with
         | None ->
-            return
-                invalidOp "No storage device for title data"
+            return None
         | Some device ->
             do! waitUntil(fun () -> not !is_busy)
             try
@@ -228,11 +239,10 @@ type Storage(use_player_storage) =
                 is_busy := false
     }
 
-    member this.DoPlayerStorage container_name f = task {
+    member this.DoPlayerStorage(container_name, f) = task {
         match !player_device with
         | None ->
-            return
-                invalidOp "No storage device for player data"
+            return None
         | Some device ->
             do! waitUntil(fun () -> not !is_busy)
             try
