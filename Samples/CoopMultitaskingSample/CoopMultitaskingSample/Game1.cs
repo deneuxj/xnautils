@@ -19,7 +19,7 @@ namespace CoopMultiTaskingSample
   /// <summary>
   /// This is the main type for your game
   /// </summary>
-  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider
+  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider, UserSettings.IBackgroundColorHolder
   {
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
@@ -27,7 +27,7 @@ namespace CoopMultiTaskingSample
     Texture2D blankTexture;
 
     ScreenManager.ScreenManager screenManager;
-    Main.Main mainComponent;
+    Main.Main<Game1> mainComponent;
 #if XBOX360
     GamerServicesComponent gamerServices;
 #endif
@@ -36,6 +36,8 @@ namespace CoopMultiTaskingSample
     int FPS_SMOOTH = 10;
     int fpsSmooth = 1;
     int fps = 0;
+
+    Color clearColor = Color.CornflowerBlue;
 
     public Game1()
     {
@@ -53,7 +55,7 @@ namespace CoopMultiTaskingSample
     {
       // TODO: Add your initialization logic here
       screenManager = new ScreenManager.ScreenManager(this, (ScreenManager.IUiContentProvider)this);
-      mainComponent = new Main.Main(this, screenManager);
+      mainComponent = new Main.Main<Game1>(this, screenManager);
       base.Components.Add(screenManager);
       base.Components.Add(mainComponent);
 
@@ -114,7 +116,7 @@ namespace CoopMultiTaskingSample
       else
         fpsSmooth++;
 
-      GraphicsDevice.Clear(Color.CornflowerBlue);
+      GraphicsDevice.Clear(clearColor);
 
       // TODO: Add your drawing code here
       try
@@ -147,6 +149,11 @@ namespace CoopMultiTaskingSample
     SpriteBatch ScreenManager.IUiContentProvider.SpriteBatch
     {
       get { return spriteBatch; }
+    }
+
+    void UserSettings.IBackgroundColorHolder.SetBackgroundColor(Color value)
+    {
+      clearColor = value;
     }
   }
 }
