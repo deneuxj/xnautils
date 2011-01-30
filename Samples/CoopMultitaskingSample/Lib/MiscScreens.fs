@@ -10,6 +10,9 @@ open XNAUtils.TextScreen
 
 let content_path = "ui"
 
+let user_container = "User data"
+let user_settings_filename = "user_prefs.xml"
+
 let mkInstructions controlling_player sys =
     new TextScreen(content_path, controlling_player, sys,
                     [| "The game screen shows a number in the upper left corner"
