@@ -140,6 +140,14 @@ type ScreenBase<'T>(relative_content_path) =
         member this.SetGame(ng) = this.SetGame(ng)
 
         member this.Draw() =
+            match this.BeginDrawer() with
+            | Some rsc ->
+                try
+                    (!drawer)(rsc)
+                finally
+                    this.EndDrawer(rsc)
+            | None -> ()
+
             if not this.IsOnTop then
                 match !game with
                 | Some g ->
@@ -154,13 +162,6 @@ type ScreenBase<'T>(relative_content_path) =
                         this.SpriteBatch.End()
                 | _ -> ()
 
-            match this.BeginDrawer() with
-            | Some rsc ->
-                try
-                    (!drawer)(rsc)
-                finally
-                    this.EndDrawer(rsc)
-            | None -> ()
 
         member this.LoadContent() =
             this.LoadContent()
