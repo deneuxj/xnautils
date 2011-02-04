@@ -85,16 +85,23 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             do! menu_loop exit_game controlling_player data
         | Some Options ->
             use settings = mkUserSettingsScreen controlling_player sys menu_animation menu_placement storage
-            screen_manager.AddScreen(settings)
-            let! choice = settings.Task
-            screen_manager.RemoveScreen(settings)
-            let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager data choice
-            data'.Apply(game)
-            if storage.PlayerStorage.IsSome then
-                let! result = storage.DoPlayerStorage(user_container, saveXml user_settings_filename data')
-                if result.IsNone then
-                    do! doOnGuide <| fun() -> error "Failed to save user settings."
-            do! menu_loop exit_game controlling_player data'
+            let rec work data = task {
+                screen_manager.AddScreen(settings)
+                let! choice = settings.Task
+                screen_manager.RemoveScreen(settings)
+                match choice with
+                | Some _ ->
+                    let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager data choice
+                    data'.Apply(game)
+                    do! work data'
+                | None ->
+                    if storage.PlayerStorage.IsSome then
+                        let! result = storage.DoPlayerStorage(user_container, saveXml user_settings_filename data)
+                        if result.IsNone then
+                            do! doOnGuide <| fun() -> error "Failed to save user settings."
+                    do! menu_loop exit_game controlling_player data
+            }
+            do! work data
         | _ -> () // TODO. For now we send back to the press start screen
     }
 

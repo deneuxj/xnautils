@@ -115,9 +115,12 @@ type ScreenBase<'T> (relative_content_path) =
                         System.IO.Path.Combine(new_game.Content.RootDirectory, relative_content_path))
 
             match !game, !content with
-            | Some game, Some content when not (System.Object.ReferenceEquals(game, new_game)) ->
-                content.Unload()
-                new_game, mkContent()
+            | Some game, Some content ->
+                if System.Object.ReferenceEquals(game, new_game) then
+                    game, content
+                else
+                    content.Unload()
+                    new_game, mkContent()
             | None, None ->
                 new_game, mkContent()
             | _ -> failwith "Unreachable"

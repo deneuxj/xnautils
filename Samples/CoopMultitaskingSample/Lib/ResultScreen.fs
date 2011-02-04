@@ -48,7 +48,7 @@ type ResultScreen(sys : Environment, player, reason) =
         | Some r -> r.batch.Dispose()
         | None -> ()
 
-        let font : SpriteFont = base.Content.Load("font")
+        let font : SpriteFont = base.Content.Load("ui/font")
         rsc := Some
                 { batch = new SpriteBatch(base.Game.GraphicsDevice)
                   font = font }

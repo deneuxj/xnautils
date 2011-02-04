@@ -56,7 +56,7 @@ type FontSizes =
     | Large
     | Reset
 
-let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data : Data) (choice : MenuEntries option)= task {
+let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data : Data) (choice : MenuEntries option) = task {
     match choice with
     | Some SetBackgroundColor ->
         let menu_items =
@@ -86,9 +86,9 @@ let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data 
         sm.AddScreen(font_menu)
         let! choice = font_menu.Task
         match choice with
-        | Some Medium | Some FontSizes.Reset -> ()
-        | Some Small -> ()
-        | Some Large -> ()
+        | Some Medium | Some FontSizes.Reset -> data.FontSize <- 1.0f
+        | Some Small -> data.FontSize <- 0.5f
+        | Some Large -> data.FontSize <- 1.5f
         | None -> ()
         sm.RemoveScreen(font_menu)
         return data
