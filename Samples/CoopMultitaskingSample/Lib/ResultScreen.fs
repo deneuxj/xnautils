@@ -29,7 +29,7 @@ type ResultScreen(sys : Environment, player, reason) =
         input.Update()
         if not (input.IsStartPressed()) then
             do! sys.WaitNextFrame()
-            do! wait()
+            return! wait()
     }
 
     member this.Task = task {
