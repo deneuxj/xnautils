@@ -23,7 +23,7 @@ type MainMenuEntries =
     | Exit
 
 
-type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, screen_manager : ScreenManager) =
+type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_manager : ScreenManager) =
     inherit DrawableGameComponent(game)
 
     let scheduler = new Scheduler()
@@ -43,7 +43,6 @@ type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, scree
 
         use menu =
             new MenuScreen<_>(
-                content_path,
                 controlling_player,
                 sys,
                 [| Play, "Play now"
@@ -64,7 +63,7 @@ type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, scree
         | Some Exit ->
             exit_game := true
         | Some Play ->
-            use gameplay = new GameplayScreen(content_path, sys, controlling_player)
+            use gameplay = new GameplayScreen(sys, controlling_player)
             screen_manager.AddScreen(gameplay)
             let! gameplay_result = gameplay.Task
             screen_manager.RemoveScreen(gameplay)
@@ -72,7 +71,7 @@ type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, scree
             match gameplay_result with
             | Aborted _ -> ()
             | _ ->
-                use results = new ResultScreen(content_path, sys, controlling_player, gameplay_result)
+                use results = new ResultScreen(sys, controlling_player, gameplay_result)
                 screen_manager.AddScreen(results)
                 do! results.Task
                 screen_manager.RemoveScreen(results)
@@ -85,12 +84,16 @@ type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, scree
             screen_manager.RemoveScreen(instructions)
             do! menu_loop exit_game controlling_player data
         | Some Options ->
-            use settings = mkUserSettingsScreen content_path controlling_player sys menu_animation menu_placement storage
+            use settings = mkUserSettingsScreen controlling_player sys menu_animation menu_placement storage
             screen_manager.AddScreen(settings)
             let! choice = settings.Task
             screen_manager.RemoveScreen(settings)
-            let! data' = handleUserSettingsMenu content_path controlling_player sys menu_animation menu_placement screen_manager storage data choice
+            let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager data choice
             data'.Apply(game)
+            if storage.PlayerStorage.IsSome then
+                let! result = storage.DoPlayerStorage(user_container, saveXml user_settings_filename data')
+                if result.IsNone then
+                    do! doOnGuide <| fun() -> error "Failed to save user settings."
             do! menu_loop exit_game controlling_player data'
         | _ -> () // TODO. For now we send back to the press start screen
     }
@@ -98,7 +101,7 @@ type Main<'G  when 'G :> Game and 'G :> IBackgroundColorHolder>(game : 'G, scree
     let main_task = task {
         let exit_game = ref false
         while not !exit_game do
-            use press_start = new PressStartScreen(content_path, sys, 0.5f, 0.1f, 0.5f)
+            use press_start = new PressStartScreen(sys, 0.5f, 0.1f, 0.5f)
             screen_manager.AddScreen(press_start)
             let! controlling_player = press_start.Task
             screen_manager.RemoveScreen(press_start)

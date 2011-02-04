@@ -97,13 +97,14 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
 
 // A screen implementation that provides its own content manager and access to the game object.
 [<AbstractClass>]
-type ScreenBase<'T>(relative_content_path) =
-
+type ScreenBase<'T> (relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
     let screen_manager : ScreenManager option ref = ref None
     let drawer : ('T -> unit) ref = ref (fun _ -> ())
+
+    new() = new ScreenBase<'T>("")
 
     abstract member SetGame : Game -> unit
     default this.SetGame(new_game) =

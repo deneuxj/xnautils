@@ -20,8 +20,8 @@ type PauseMenuAction =
     | Abort
     | Resume
 
-type GameplayScreen(ui_content_path, sys : Environment, player) =
-    inherit ScreenBase<Resources>(ui_content_path)
+type GameplayScreen(sys : Environment, player) =
+    inherit ScreenBase<Resources>()
 
     let rsc = ref None
 
@@ -80,7 +80,6 @@ type GameplayScreen(ui_content_path, sys : Environment, player) =
         // Create the menu screen.
         use menu =
             new MenuScreen<_>(
-                ui_content_path,
                 player,
                 sys,
                 [| (ShowInstructions, "How to play") ;

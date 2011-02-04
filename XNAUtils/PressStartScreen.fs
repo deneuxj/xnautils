@@ -8,8 +8,8 @@ open XNAUtils.CoopMultiTasking
 
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 
-type PressStartScreen(content_path, sys : Environment, fade_in, fade_out, blink) =
-    inherit ScreenManager.ScreenBase<unit>(content_path)
+type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
+    inherit ScreenManager.ScreenBase<unit>()
 
     let pos = ref Vector2.Zero
     let txt = "Press start"

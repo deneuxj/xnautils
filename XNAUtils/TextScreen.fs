@@ -7,8 +7,8 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 
-type TextScreen(content_path, player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
-    inherit ScreenBase<unit>(content_path)
+type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
+    inherit ScreenBase<unit>()
 
     let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f)
 

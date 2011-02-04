@@ -8,13 +8,11 @@ open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.TextScreen
 
-let content_path = "ui"
-
 let user_container = "User data"
 let user_settings_filename = "user_prefs.xml"
 
 let mkInstructions controlling_player sys =
-    new TextScreen(content_path, controlling_player, sys,
+    new TextScreen(controlling_player, sys,
                     [| "The game screen shows a number in the upper left corner"
                        "and a 3x3 matrix in the middle of the screen."
                        "Whenever you see the number in the matrix, press A."

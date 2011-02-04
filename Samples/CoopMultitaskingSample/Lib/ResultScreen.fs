@@ -18,8 +18,8 @@ type GameplayResult =
     | TooLate of float * int
     | Aborted
 
-type ResultScreen(content_path, sys : Environment, player, reason) =
-    inherit ScreenBase<Resources>(content_path)
+type ResultScreen(sys : Environment, player, reason) =
+    inherit ScreenBase<Resources>()
 
     let rsc = ref None
     let input = new InputChanges(player)
