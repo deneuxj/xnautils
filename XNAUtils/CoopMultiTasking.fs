@@ -78,6 +78,7 @@ let forLoop (xs : 'T seq) f =
 type TaskBuilder() =
     member x.Bind(e, f) = bind f e
     member x.Return(r) = result r
+    member x.ReturnFrom(r) = r
     member x.Combine(e1, e2) = combine e1 e2
     member x.Delay(f) = delay f
     member x.Zero() = result ()
