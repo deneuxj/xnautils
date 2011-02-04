@@ -8,43 +8,40 @@ open XNAUtils.MenuScreen
 open XNAUtils.StorageTasks
 
 
-type IBackgroundColorHolder =
+type ISettingsNotifiable =
     interface
         abstract member SetBackgroundColor : Color -> unit
+        abstract member SetFontSize : float32 -> unit
     end
 
 
 type Data() =
     let background_color = ref Color.CornflowerBlue
+    let font_size = ref 1.0f
 
     member this.BackgroundColor
         with get() = !background_color
         and set(c) = background_color := c
 
-    member this.Apply(bg_holder : IBackgroundColorHolder) =
-        bg_holder.SetBackgroundColor(!background_color)
+    member this.FontSize
+        with get() = !font_size
+        and set(s) = font_size := s
+
+    member this.Apply(target : ISettingsNotifiable) =
+        target.SetBackgroundColor(!background_color)
+        target.SetFontSize(!font_size)
 
 
 type MenuEntries =
     | SetBackgroundColor
-    | Load
-    | Save
+    | SetFontSize
 
 let menu_items =
     [| (SetBackgroundColor, "Background");
-       (Load, "Load preferences");
-       (Save, "Save preferences") |]
+       (SetFontSize, "Font size") |]
 
-let mkUserSettingsScreen content_path player sys anim placement (storage : Storage) =
-    let menu_items =
-        [|
-            yield (SetBackgroundColor, "Background")
-            if storage.PlayerStorage.IsSome then
-                yield (Load, "Load preferences")
-                yield (Save, "Save preferences")
-        |]
-
-    new MenuScreen<MenuEntries>(content_path, player, sys, menu_items, anim, placement)
+let mkUserSettingsScreen player sys anim placement (storage : Storage) =
+    new MenuScreen<MenuEntries>(player, sys, menu_items, anim, placement)
 
 type Colors =
     | AliceBlue
@@ -53,7 +50,13 @@ type Colors =
     | CadetBlue
     | Reset
 
-let handleUserSettingsMenu content_path player sys anim placement (sm : ScreenManager) (storage : Storage) (data : Data) (choice : MenuEntries option)= task {
+type FontSizes =
+    | Small
+    | Medium
+    | Large
+    | Reset
+
+let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data : Data) (choice : MenuEntries option)= task {
     match choice with
     | Some SetBackgroundColor ->
         let menu_items =
@@ -61,42 +64,34 @@ let handleUserSettingsMenu content_path player sys anim placement (sm : ScreenMa
                (CornflowerBlue, "Cornflower Blue");
                (BlueViolet, "BlueViolet");
                (CadetBlue, "CadetBlue");
-               (Reset, "Reset to default") |]
-        use color_menu = new MenuScreen<Colors>(content_path, player, sys, menu_items, anim, placement)
+               (Colors.Reset, "Reset to default") |]
+        use color_menu = new MenuScreen<Colors>(player, sys, menu_items, anim, placement)
         sm.AddScreen(color_menu)
         let! choice = color_menu.Task
         match choice with
         | Some AliceBlue -> data.BackgroundColor <- Color.AliceBlue
-        | Some CornflowerBlue | Some Reset -> data.BackgroundColor <- Color.CornflowerBlue
+        | Some CornflowerBlue | Some Colors.Reset -> data.BackgroundColor <- Color.CornflowerBlue
         | Some BlueViolet -> data.BackgroundColor <- Color.BlueViolet
         | Some CadetBlue -> data.BackgroundColor <- Color.CadetBlue
         | None -> ()
         sm.RemoveScreen(color_menu)
         return data
-    | Some Load ->
-        do! storage.CheckPlayerStorage
-        match storage.PlayerStorage with
-        | Some _ ->
-            let! maybe_data = storage.DoPlayerStorage(MiscScreens.user_container, loadXml MiscScreens.user_settings_filename)
-            match maybe_data with
-            | Some(Some data') -> return data'
-            | None | Some None ->
-                do! doOnGuide <| fun() -> error "Failed to load user settings."
-                return data
-        | None ->
-            return data
-    | Some Save ->
-        do! storage.CheckPlayerStorage
-        match storage.PlayerStorage with
-        | Some _ ->
-            let! maybe_data = storage.DoPlayerStorage(MiscScreens.user_container, saveXml MiscScreens.user_settings_filename data)
-            match maybe_data with
-            | Some(Some _) -> return data
-            | None | Some None ->
-                do! doOnGuide <| fun() -> error "Failed to save user settings."
-                return data
-        | None ->
-            return data
+    | Some SetFontSize ->
+        let menu_items = 
+            [| (Small, "Small");
+               (Medium, "Medium");
+               (Large, "Large");
+               (FontSizes.Reset, "Reset") |]
+        use font_menu = new MenuScreen<FontSizes>(player, sys, menu_items, anim, placement)
+        sm.AddScreen(font_menu)
+        let! choice = font_menu.Task
+        match choice with
+        | Some Medium | Some FontSizes.Reset -> ()
+        | Some Small -> ()
+        | Some Large -> ()
+        | None -> ()
+        sm.RemoveScreen(font_menu)
+        return data
     | None ->
         return data
 }

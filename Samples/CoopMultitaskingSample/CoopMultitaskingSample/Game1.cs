@@ -19,11 +19,14 @@ namespace CoopMultiTaskingSample
   /// <summary>
   /// This is the main type for your game
   /// </summary>
-  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider, UserSettings.IBackgroundColorHolder
+  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider, UserSettings.ISettingsNotifiable
   {
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
     SpriteFont font;
+    SpriteFont mediumFont;
+    SpriteFont smallFont;
+    SpriteFont bigFont;
     Texture2D blankTexture;
 
     ScreenManager.ScreenManager screenManager;
@@ -77,7 +80,10 @@ namespace CoopMultiTaskingSample
       spriteBatch = new SpriteBatch(GraphicsDevice);
 
       // TODO: use this.Content to load your game content here
-      font = Content.Load<SpriteFont>(@"ui\font");
+      mediumFont = Content.Load<SpriteFont>(@"ui\font");
+      font = mediumFont;
+      smallFont = Content.Load<SpriteFont>(@"ui\small_font");
+      bigFont = Content.Load<SpriteFont>(@"ui\big_font");
       blankTexture = Content.Load<Texture2D>(@"ui\blank");
     }
 
@@ -151,9 +157,14 @@ namespace CoopMultiTaskingSample
       get { return spriteBatch; }
     }
 
-    void UserSettings.IBackgroundColorHolder.SetBackgroundColor(Color value)
+    void UserSettings.ISettingsNotifiable.SetBackgroundColor(Color value)
     {
       clearColor = value;
+    }
+
+    void UserSettings.ISettingsNotifiable.SetFontSize(float value)
+    {
+      font = value < 1.0f ? smallFont : value > 1.0f ? bigFont : mediumFont;
     }
   }
 }
