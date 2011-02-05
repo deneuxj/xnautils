@@ -48,6 +48,7 @@
     <Compile Include="UserSettings.fs" />
     <Compile Include="ResultScreen.fs" />
     <Compile Include="GameplayScreen.fs" />
+    <Compile Include="ScoreScreen.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>

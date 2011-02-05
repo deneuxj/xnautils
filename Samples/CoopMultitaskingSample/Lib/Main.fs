@@ -1,6 +1,7 @@
 module CoopMultiTaskingSample.Main
 
 open Microsoft.Xna.Framework
+open Microsoft.Xna.Framework.GamerServices
 
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
@@ -13,6 +14,7 @@ open GameplayScreen
 open ResultScreen
 open MiscScreens
 open UserSettings
+open ScoreScreen
 
 type MainMenuEntries =
     | Play
@@ -39,7 +41,14 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         { period = 0.2f;
           shift = 0.05f }
 
-    let rec menu_loop exit_game controlling_player data = task {
+    let rec menu_loop exit_game controlling_player data (scores : Scores) : Eventually<Scores> = task {
+
+        let showScores = task {
+            use score_screen = new ScoreScreen(sys, controlling_player, scores)
+            screen_manager.AddScreen(score_screen)
+            do! score_screen.Task
+            screen_manager.RemoveScreen(score_screen)
+        }
 
         use menu =
             new MenuScreen<_>(
@@ -59,9 +68,11 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         screen_manager.RemoveScreen(menu)
 
         match action with
-        | None -> () // Back to press start screen.
+        | None ->
+            return scores
         | Some Exit ->
             exit_game := true
+            return scores
         | Some Play ->
             use gameplay = new GameplayScreen(sys, controlling_player)
             screen_manager.AddScreen(gameplay)
@@ -70,19 +81,26 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
             match gameplay_result with
             | Aborted _ -> ()
-            | _ ->
+            | TooEarly (_, points) | TooLate (_, points) ->
                 use results = new ResultScreen(sys, controlling_player, gameplay_result)
                 screen_manager.AddScreen(results)
                 do! results.Task
                 screen_manager.RemoveScreen(results)
+                let player_name =
+                    match SignedInGamer.SignedInGamers.[controlling_player] with
+                    | null -> "Unknown"
+                    | player -> player.Gamertag
+                let is_hiscore = scores.AddScore(player_name, points)
+                if is_hiscore then
+                    do! showScores
 
-            do! menu_loop exit_game controlling_player data
+            return! menu_loop exit_game controlling_player data scores
         | Some Instructions ->
             use instructions = mkInstructions controlling_player sys
             screen_manager.AddScreen(instructions)
             do! instructions.Task
             screen_manager.RemoveScreen(instructions)
-            do! menu_loop exit_game controlling_player data
+            return! menu_loop exit_game controlling_player data scores
         | Some Options ->
             use settings = mkUserSettingsScreen controlling_player sys menu_animation menu_placement storage
             let rec work data = task {
@@ -93,16 +111,20 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                 | Some _ ->
                     let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager data choice
                     data'.Apply(game)
-                    do! work data'
+                    return! work data'
                 | None ->
                     if storage.PlayerStorage.IsSome then
                         let! result = storage.DoPlayerStorage(user_container, saveXml user_settings_filename data)
                         if result.IsNone then
                             do! doOnGuide <| fun() -> error "Failed to save user settings."
-                    do! menu_loop exit_game controlling_player data
+                    return! menu_loop exit_game controlling_player data scores
             }
-            do! work data
-        | _ -> () // TODO. For now we send back to the press start screen
+            return! work data
+        | Some Scores ->
+            do! showScores
+            return! menu_loop exit_game controlling_player data scores
+        | _ ->
+            return scores
     }
 
     let main_task = task {
@@ -129,7 +151,25 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                     return (new Data())
             }
             data.Apply(game)
-            do! menu_loop exit_game controlling_player data
+
+            let! scores = task {
+                if storage.TitleStorage.IsSome then
+                    let! maybe_score = storage.DoTitleStorage(score_container, loadXml score_filename)
+                    match maybe_score with
+                    | Some(Some d) -> return d
+                    | _ -> return (new Scores())
+                else
+                    return (new Scores())
+            }
+
+            let! scores = menu_loop exit_game controlling_player data scores
+
+            if storage.TitleStorage.IsSome then
+                let! result = storage.DoTitleStorage(score_container, saveXml score_filename scores)
+                match result with
+                | Some(Some()) -> ()
+                | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
+
     }
 
     override this.Initialize() =

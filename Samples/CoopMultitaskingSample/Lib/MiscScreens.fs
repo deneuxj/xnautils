@@ -11,6 +11,9 @@ open XNAUtils.TextScreen
 let user_container = "User data"
 let user_settings_filename = "user_prefs.xml"
 
+let score_container = "Scores"
+let score_filename = "scores.xml"
+
 let mkInstructions controlling_player sys =
     new TextScreen(controlling_player, sys,
                     [| "The game screen shows a number in the upper left corner"
