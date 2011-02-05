@@ -56,7 +56,8 @@ let openContainer (device : StorageDevice) name = task {
             else
                 Some container
     with
-    | :? StorageDeviceNotConnectedException ->
+    | :? StorageDeviceNotConnectedException
+    | :? InvalidOperationException ->
         return None
 }
 
