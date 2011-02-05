@@ -217,7 +217,16 @@ type Scheduler() =
         let executeReady() =
             while not (CircularQueue.isEmpty ready) do
                 let f = CircularQueue.pick ready
-                let t = f()
+                let mutable t = f()
+                while
+                        match t with
+                        | Running f -> true
+                        | _ -> false
+                    do
+                    match t with
+                    | Running f -> t <- f()
+                    | _ -> failwith "Unreachable"
+
                 x.AddTask(t)
 
         // Move waiting tasks that wake up within this frame to the ready queue and execute them
