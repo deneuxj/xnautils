@@ -157,6 +157,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                     let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager !settings choice
                     settings := data'
                     data'.Apply(game)
+                    return! work()
                 | None ->
                     // The player wants to go back to the main menu, now is a good time to save the settings.
                     if storage.PlayerStorage.IsSome then
@@ -265,7 +266,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                 // the player is done, save the scores.
                 if storage.TitleStorage.IsSome then
                     do! storage.CheckTitleStorage
-                    let! result = storage.DoTitleStorage(score_container, saveXml score_filename scores)
+                    let! result = storage.DoTitleStorage(score_container, saveXml score_filename !scores)
                     match result with
                     | Some(Some()) -> ()
                     | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
