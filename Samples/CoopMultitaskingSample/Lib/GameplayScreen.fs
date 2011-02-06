@@ -8,6 +8,7 @@ open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.InputChanges
 open XNAUtils.MenuScreen
+open XNAUtils.XNAExtensions
 
 open CoopMultiTaskingSample.ResultScreen
 
@@ -178,83 +179,86 @@ type GameplayScreen(sys : Environment, player) =
         // Loop until the player loses or aborts.
         while not (!has_missed || !has_cheated || !has_aborted) do
 
-            // Start/Stop the stopwatch, depending on whether the target number is visible and the game is paused.
-            match !target_pos, this.IsActive with
-            | Some _, false -> if watch.IsRunning then watch.Stop()
-            | Some _, true -> if not watch.IsRunning then watch.Start()
-            | None, _ -> ()
-
-            // Wait until the game is no longer paused (or continue if it's not paused).
-            do! sys.WaitUntil(fun () -> this.IsActive)
-
-            if input.IsButtonPress(Buttons.Start) then
-                // The user pressed start, bring up a pause menu
-                // First stop the timer.
-                let was_running = watch.IsRunning
-                watch.Stop()
-
-                let! resume_chosen = this.ShowPause
-                if not resume_chosen then
-                    has_aborted := true
-                
-                // Resume the timer if it was running when we stopped it.
-                if was_running then watch.Start()
-
+            if not (GamerServices.Gamer.IsSignedIn(player)) then
+                has_aborted := true
             else
-                // Has the player missed?
-                if watch.Elapsed.TotalSeconds > !grace_time then
-                    has_missed := true
+                // Start/Stop the stopwatch, depending on whether the target number is visible and the game is paused.
+                match !target_pos, this.IsActive with
+                | Some _, false -> if watch.IsRunning then watch.Stop()
+                | Some _, true -> if not watch.IsRunning then watch.Start()
+                | None, _ -> ()
+
+                // Wait until the game is no longer paused (or continue if it's not paused).
+                do! sys.WaitUntil(fun () -> this.IsActive)
+
+                if input.IsButtonPress(Buttons.Start) then
+                    // The user pressed start, bring up a pause menu
+                    // First stop the timer.
+                    let was_running = watch.IsRunning
+                    watch.Stop()
+
+                    let! resume_chosen = this.ShowPause
+                    if not resume_chosen then
+                        has_aborted := true
+                
+                    // Resume the timer if it was running when we stopped it.
+                    if was_running then watch.Start()
+
                 else
-                    // Check if the player presses too early and update the matrix.
-                    match !target_pos with
-                    | None ->
-                        if input.IsButtonPress(Buttons.A) then
-                            has_cheated := true
+                    // Has the player missed?
+                    if watch.Elapsed.TotalSeconds > !grace_time then
+                        has_missed := true
+                    else
+                        // Check if the player presses too early and update the matrix.
+                        match !target_pos with
+                        | None ->
+                            if input.IsButtonPress(Buttons.A) then
+                                has_cheated := true
 
-                        // Decide if we make the target number appear in the matrix at some random position...
-                        if flipTarget() then
-                            let i, j = rnd.Next(3), rnd.Next(3)
-                            target_pos := Some (i, j)
-                            numbers.[i, j] <- !target
-                            watch.Reset()
-                            watch.Start()
-                        else
-                            // ... or flip some position in the matrix to a number that is not the target.
+                            // Decide if we make the target number appear in the matrix at some random position...
+                            if flipTarget() then
+                                let i, j = rnd.Next(3), rnd.Next(3)
+                                target_pos := Some (i, j)
+                                numbers.[i, j] <- !target
+                                watch.Reset()
+                                watch.Start()
+                            else
+                                // ... or flip some position in the matrix to a number that is not the target.
+                                distract()
+                        | Some _ ->
+                            // The target is visible and the player presses A:
+                            // - Pick a new target
+                            // - Update the score
+                            // - Lower the grace time by 10%
+                            if input.IsButtonPress(Buttons.A) then
+                                target_pos := None
+                                target := nextTarget()
+                                let old_score = !score
+                                score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
+                                grace_time := 0.9 * !grace_time
+                                watch.Stop()
+                                watch.Reset()
+
+                                // Start rolling up the score.
+                                match !score_updater with
+                                | Some ctrl ->
+                                    // Already rolling, kill the on-going rolling effect.
+                                    ctrl.Kill()
+                                    // No need to wait until the on-going rolling effect is dead.
+                                    // The worst that might happen is that we can get two effects
+                                    // active during one frame, which is harmless.
+                                    // do! sys.WaitUntil(fun() -> ctrl.IsDead)
+                                | None -> ()
+                                // Spawn a new score rolling effect.
+                                score_updater := sys.Spawn(this.UpdateScore old_score !score 1.0) |> Some
+
+                            // Flip on some position that does not contain the target number to some random non-target number.
                             distract()
-                    | Some _ ->
-                        // The target is visible and the player presses A:
-                        // - Pick a new target
-                        // - Update the score
-                        // - Lower the grace time by 10%
-                        if input.IsButtonPress(Buttons.A) then
-                            target_pos := None
-                            target := nextTarget()
-                            let old_score = !score
-                            score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
-                            grace_time := 0.9 * !grace_time
-                            watch.Stop()
-                            watch.Reset()
 
-                            // Start rolling up the score.
-                            match !score_updater with
-                            | Some ctrl ->
-                                // Already rolling, kill the on-going rolling effect.
-                                ctrl.Kill()
-                                // No need to wait until the on-going rolling effect is dead.
-                                // The worst that might happen is that we can get two effects
-                                // active during one frame, which is harmless.
-                                // do! sys.WaitUntil(fun() -> ctrl.IsDead)
-                            | None -> ()
-                            // Spawn a new score rolling effect.
-                            score_updater := sys.Spawn(this.UpdateScore old_score !score 1.0) |> Some
+                do! sys.Wait(swap_period)
+                input.Update()
 
-                        // Flip on some position that does not contain the target number to some random non-target number.
-                        distract()
-
-            do! sys.Wait(swap_period)
-            input.Update()
-
-        // Wait until A is no longer pressed, then wait until Start or A is pressed.
+        // Unless the player aborted, wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
             // Draw "Game over" instead of the target
             this.SetDrawer(

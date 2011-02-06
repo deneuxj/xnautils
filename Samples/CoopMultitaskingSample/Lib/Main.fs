@@ -214,52 +214,61 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             let! controlling_player = press_start.Task
             screen_manager.RemoveScreen(press_start)
 
-            // Ask the user to choose for a storage device used for the scores.
-            do! storage.InitTitleStorage
+            // Ask the player to sign in unless already signed in.
+            if not(Gamer.IsSignedIn(controlling_player)) then
+                do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
+                do! sys.WaitUntil(fun () -> not (Guide.IsVisible))
 
-            // Ask again for a storage used for the user settings.
-            storage.Player <- Some controlling_player
-            do! storage.InitPlayerStorage
+            // Proceed only if the user actually signed in.
+            if not(Gamer.IsSignedIn(controlling_player)) then
+                do! doOnGuide <| fun () -> error "You must sign in to play this game."
+            else
+                // Ask the user to choose for a storage device used for the scores.
+                do! storage.InitTitleStorage
 
-            // Load user settings, if any. Otherwise, use default values.
-            let! data = task {
-                if storage.PlayerStorage.IsSome then
-                    do! storage.CheckPlayerStorage
-                    let! maybe_data = storage.DoPlayerStorage(user_container, loadXml user_settings_filename)
-                    match maybe_data with
-                    | Some(Some d) -> return d
-                    | _ -> return (new Data())
-                else
-                    return (new Data())
-            }
-            settings := data
+                // Ask again for a storage used for the user settings.
+                storage.Player <- Some controlling_player
+                do! storage.InitPlayerStorage
 
-            // Apply the user settings, which affect the background color and the font size.
-            (!settings).Apply(game)
+                // Load user settings, if any. Otherwise, use default values.
+                let! data = task {
+                    if storage.PlayerStorage.IsSome then
+                        do! storage.CheckPlayerStorage
+                        let! maybe_data = storage.DoPlayerStorage(user_container, loadXml user_settings_filename)
+                        match maybe_data with
+                        | Some(Some d) -> return d
+                        | _ -> return (new Data())
+                    else
+                        return (new Data())
+                }
+                settings := data
 
-            // Load scores.
-            let! data = task {
+                // Apply the user settings, which affect the background color and the font size.
+                (!settings).Apply(game)
+
+                // Load scores.
+                let! data = task {
+                    if storage.TitleStorage.IsSome then
+                        do! storage.CheckTitleStorage
+                        let! maybe_score = storage.DoTitleStorage(score_container, loadXml score_filename)
+                        match maybe_score with
+                        | Some(Some d) -> return d
+                        | _ -> return (new Scores())
+                    else
+                        return (new Scores())
+                }
+                scores := data
+
+                // Go into the main menu loop
+                do! menu_loop controlling_player
+
+                // the player is done, save the scores.
                 if storage.TitleStorage.IsSome then
                     do! storage.CheckTitleStorage
-                    let! maybe_score = storage.DoTitleStorage(score_container, loadXml score_filename)
-                    match maybe_score with
-                    | Some(Some d) -> return d
-                    | _ -> return (new Scores())
-                else
-                    return (new Scores())
-            }
-            scores := data
-
-            // Go into the main menu loop
-            do! menu_loop controlling_player
-
-            // the player is done, save the scores.
-            if storage.TitleStorage.IsSome then
-                do! storage.CheckTitleStorage
-                let! result = storage.DoTitleStorage(score_container, saveXml score_filename scores)
-                match result with
-                | Some(Some()) -> ()
-                | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
+                    let! result = storage.DoTitleStorage(score_container, saveXml score_filename scores)
+                    match result with
+                    | Some(Some()) -> ()
+                    | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
 
     }
 

@@ -6,6 +6,7 @@ open Microsoft.Xna.Framework.Graphics
 
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
+open XNAUtils.XNAExtensions
 
 type AnimationParameters =
     {  period : float32
@@ -45,14 +46,17 @@ type MenuScreen<'I>(player : PlayerIndex, sys : Environment, items : ('I * strin
             // We don't want to react to input that's not for us.
             do! sys.WaitUntil(fun () -> this.IsOnTop)
 
-            input.Update()
+            if GamerServices.Gamer.IsSignedIn(player) then
+                input.Update()
 
-            if input.IsButtonPress(Buttons.DPadDown) then down()
-            elif input.IsButtonPress(Buttons.DPadUp) then up()
-            elif input.IsButtonPress(Buttons.A) then selected := true
-            elif input.IsButtonPress(Buttons.B) then backed := true
+                if input.IsButtonPress(Buttons.DPadDown) then down()
+                elif input.IsButtonPress(Buttons.DPadUp) then up()
+                elif input.IsButtonPress(Buttons.A) then selected := true
+                elif input.IsButtonPress(Buttons.B) then backed := true
 
-            do! sys.WaitNextFrame()
+                do! sys.WaitNextFrame()
+            else
+                backed := true
 
         animator.Kill()
         do! sys.WaitUntil(fun() -> animator.IsDead)

@@ -7,7 +7,7 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.InputChanges
-
+open XNAUtils.XNAExtensions
 
 type Resources =
     { font : SpriteFont
@@ -27,7 +27,7 @@ type ResultScreen(sys : Environment, player, reason) =
 
     let rec wait() = task {
         input.Update()
-        if not (input.IsStartPressed()) then
+        if not (input.IsStartPressed()) && GamerServices.Gamer.IsSignedIn(player) then
             do! sys.WaitNextFrame()
             return! wait()
     }

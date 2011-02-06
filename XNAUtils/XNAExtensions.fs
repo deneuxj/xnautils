@@ -12,3 +12,6 @@ type GamerServices.SignedInGamerCollection with
         match this.[player] with
         | null -> None
         | s -> Some s
+type GamerServices.Gamer with
+    static member IsSignedIn(player : PlayerIndex) =
+        GamerServices.Gamer.SignedInGamers.ItemOpt(player).IsSome

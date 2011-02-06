@@ -7,7 +7,7 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.InputChanges
-
+open XNAUtils.XNAExtensions
 
 type Resources =
     { font : SpriteFont
@@ -71,7 +71,7 @@ type ScoreScreen(sys : Environment, player : PlayerIndex, scores : Scores) =
 
         this.SetDrawer(this.DrawScores)
 
-        do! sys.WaitUntil(input.IsStartPressed)
+        do! sys.WaitUntil(fun() -> input.IsStartPressed() || not(GamerServices.Gamer.IsSignedIn(player)))
 
         input_updater.Kill()
         return! sys.WaitUntil(fun() -> input_updater.IsDead)

@@ -6,6 +6,7 @@ open Microsoft.Xna.Framework.Graphics
 
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
+open XNAUtils.XNAExtensions
 
 type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
     inherit ScreenBase<unit>()
@@ -19,7 +20,12 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
         let animator = sys.Spawn(animation.Task)
 
-        while not this.IsOnTop || not (input.IsButtonPress(Buttons.B) || input.IsButtonPress(Buttons.A) || input.IsButtonPress(Buttons.Back)) do
+        // Wait until the player signs off or presses a button.
+        while
+            GamerServices.Gamer.IsSignedIn(player)
+            && not (this.IsOnTop
+                    && (input.IsBackPressed()
+                        || input.IsStartPressed())) do
             input.Update()
             do! sys.WaitNextFrame()
 
