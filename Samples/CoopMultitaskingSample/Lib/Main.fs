@@ -114,6 +114,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                     return! work data'
                 | None ->
                     if storage.PlayerStorage.IsSome then
+                        do! storage.CheckPlayerStorage
                         let! result = storage.DoPlayerStorage(user_container, saveXml user_settings_filename data)
                         if result.IsNone then
                             do! doOnGuide <| fun() -> error "Failed to save user settings."
@@ -143,6 +144,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
             let! data = task {
                 if storage.PlayerStorage.IsSome then
+                    do! storage.CheckPlayerStorage
                     let! maybe_data = storage.DoPlayerStorage(user_container, loadXml user_settings_filename)
                     match maybe_data with
                     | Some(Some d) -> return d
@@ -154,6 +156,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
             let! scores = task {
                 if storage.TitleStorage.IsSome then
+                    do! storage.CheckTitleStorage
                     let! maybe_score = storage.DoTitleStorage(score_container, loadXml score_filename)
                     match maybe_score with
                     | Some(Some d) -> return d
@@ -165,6 +168,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             let! scores = menu_loop exit_game controlling_player data scores
 
             if storage.TitleStorage.IsSome then
+                do! storage.CheckTitleStorage
                 let! result = storage.DoTitleStorage(score_container, saveXml score_filename scores)
                 match result with
                 | Some(Some()) -> ()
