@@ -58,7 +58,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                    Instructions, "How to play"
                    Options, "Options"
                    Scores, "Scores"
-                   Credits, "Credits"
+                   Credits, "More information"
                    Exit, "Exit" |],
                 menu_animation,
                 menu_placement
@@ -96,7 +96,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
             return! menu_loop exit_game controlling_player data scores
         | Some Instructions ->
-            use instructions = mkInstructions controlling_player sys
+            use instructions = mkInstructions(controlling_player, sys)
             screen_manager.AddScreen(instructions)
             do! instructions.Task
             screen_manager.RemoveScreen(instructions)
@@ -124,8 +124,12 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         | Some Scores ->
             do! showScores
             return! menu_loop exit_game controlling_player data scores
-        | _ ->
-            return scores
+        | Some Credits ->
+            use info = mkInfo(controlling_player, sys)
+            screen_manager.AddScreen(info)
+            do! info.Task
+            screen_manager.RemoveScreen(info)
+            return! menu_loop exit_game controlling_player data scores
     }
 
     let main_task = task {

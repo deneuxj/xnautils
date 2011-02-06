@@ -100,7 +100,7 @@ type GameplayScreen(sys : Environment, player) =
             match action with
             | Some ShowInstructions ->
                 // Create an instructions screen
-                use instructions = MiscScreens.mkInstructions player sys
+                use instructions = MiscScreens.mkInstructions(player, sys)
                 // Show it
                 this.ScreenManager.AddScreen(instructions)
                 // Wait for the user to exit it.
