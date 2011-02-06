@@ -8,6 +8,7 @@ open Microsoft.Xna.Framework.Storage
 open Microsoft.Xna.Framework.GamerServices
 
 open CoopMultiTasking
+open XNAExtensions
 
 let rec doOnGuide f = task {
     do! waitUntil(fun() -> not Guide.IsVisible)
@@ -148,7 +149,7 @@ type Storage(use_player_storage) =
                     ("No device selected",
                         "You have not selected a storage device, which will disable some of the features of this game.\nDo you want to select a device now?")
             if yes_chosen then
-                do! getSD getStorageDevice alert storeResult
+                return! getSD getStorageDevice alert storeResult
             else
                 storeResult None
     }
@@ -177,12 +178,21 @@ type Storage(use_player_storage) =
     member this.InitPlayerStorage = task {
         if use_player_storage then
             match !maybe_player with
-            | Some p -> do! getSD (getUserStorageDevice p) (personalAlert p) (fun v -> player_device := v)
+            | Some p ->
+                // If the player isn't signed in, let him/her sign in now.
+                if Gamer.SignedInGamers.ItemOpt(p).IsNone then
+                    do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
+
+                // If the player refused to sign in, reset player_device.
+                if Gamer.SignedInGamers.ItemOpt(p).IsNone then
+                    player_device := None
+                else
+                    return! getSD (getUserStorageDevice p) (personalAlert p) (fun v -> player_device := v)
             | None -> player_device := None
     }
 
     member this.InitTitleStorage = task {
-        do! getSD getStorageDevice titleAlert (fun v -> device := v)
+        return! getSD getStorageDevice titleAlert (fun v -> device := v)
     }
 
     member this.CheckTitleStorage = task {
@@ -207,22 +217,32 @@ type Storage(use_player_storage) =
     member this.CheckPlayerStorage = task {
         if (!maybe_player).IsNone then invalidOp "No player assigned"
         let player = (!maybe_player).Value
-        match !player_device with
-        | Some dev ->
-            if not dev.IsConnected then
-                let! yes_chosen =
-                    callAlert
-                        (personalAlert player, Guide.EndShowMessageBox)
-                        ("Device disconnected",
-                         "The storage device used for player data was disconnected.\nWould you like to select a new device now?")
-                if yes_chosen then
-                    let! dev = getUserStorageDevice player
-                    match dev with
-                    | Some dev -> player_device := Some dev
-                    | None -> ()
-                else
-                    player_device := None
-        | None -> () // No device was chosen, which means we haven't lost it!
+
+        // If the player isn't signed in, let him/her sign in now.
+        if Gamer.SignedInGamers.ItemOpt(player).IsNone then
+            do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
+
+        // If the player refused to sign in, reset player_device.
+        if Gamer.SignedInGamers.ItemOpt(player).IsNone then
+            player_device := None
+        else
+            // Check the status of the device. If it's not connected, let the player select a new device.
+            match !player_device with
+            | Some dev ->
+                if not dev.IsConnected then
+                    let! yes_chosen =
+                        callAlert
+                            (personalAlert player, Guide.EndShowMessageBox)
+                            ("Device disconnected",
+                             "The storage device used for player data was disconnected.\nWould you like to select a new device now?")
+                    if yes_chosen then
+                        let! dev = getUserStorageDevice player
+                        match dev with
+                        | Some dev -> player_device := Some dev
+                        | None -> ()
+                    else
+                        player_device := None
+            | None -> () // No device was chosen, which means we haven't lost it!
     }
 
     member this.DoTitleStorage(container_name, f) = task {
@@ -241,16 +261,19 @@ type Storage(use_player_storage) =
     }
 
     member this.DoPlayerStorage(container_name, f) = task {
-        match !player_device with
-        | None ->
+        match !player_device, !maybe_player with
+        | None, _ | _, None ->
             return None
-        | Some device ->
-            do! waitUntil(fun () -> not !is_busy)
-            try
-                is_busy := true
+        | Some device, Some player ->
+            if Gamer.SignedInGamers.ItemOpt(player).IsSome then
+                do! waitUntil(fun () -> not !is_busy)
+                try
+                    is_busy := true
 
-                let! result = doInContainer device container_name f
-                return result
-            finally
-                is_busy := false            
+                    let! result = doInContainer device container_name f
+                    return result
+                finally
+                    is_busy := false
+            else
+                return None
     }
