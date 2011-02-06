@@ -179,6 +179,8 @@ type Scheduler() =
 
     let ticks = ref 0L
 
+    let exceptions = ref []
+
     // Ordering of tasks in the waiting queue.
     let cmp ((ev1, n1), (ev2, n2)) = n1 <= n2
 
@@ -224,7 +226,13 @@ type Scheduler() =
                         | _ -> false
                     do
                     match t with
-                    | Running f -> t <- f()
+                    | Running f ->
+                        try
+                            t <- f()
+                        with
+                        | e ->
+                            t <- Completed()
+                            exceptions := e :: !exceptions
                     | _ -> failwith "Unreachable"
 
                 x.AddTask(t)
@@ -248,6 +256,13 @@ type Scheduler() =
         blocked_next_frame.Clear()
 
         ticks := end_frame
+
+    member x.Exceptions = !exceptions
+
+    member x.HasExceptions = not (List.isEmpty !exceptions)
+
+    member x.ClearExceptions = exceptions := []
+
 
 let toEventuallyObj ev = task {
     let! res = ev
