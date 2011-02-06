@@ -82,8 +82,11 @@ let loadXml<'T> filename (container : StorageContainer) =
         if container.FileExists(filename) then
             use file = container.OpenFile(filename, IO.FileMode.Open)
             let serializer = new XmlSerializer(typeof<'T>)
-            serializer.Deserialize(file) :?> 'T
-            |> Some
+            try
+                serializer.Deserialize(file) :?> 'T
+                |> Some
+            with
+            | _ -> None
         else
             None
     with
