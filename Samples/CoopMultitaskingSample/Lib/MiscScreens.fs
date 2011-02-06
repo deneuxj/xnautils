@@ -7,6 +7,7 @@ open Microsoft.Xna.Framework.Graphics
 open XNAUtils.CoopMultiTasking
 open XNAUtils.ScreenManager
 open XNAUtils.TextScreen
+open XNAUtils.MenuScreen
 
 let user_container = "User data"
 let user_settings_filename = "user_prefs.xml"
@@ -14,10 +15,19 @@ let user_settings_filename = "user_prefs.xml"
 let score_container = "Scores"
 let score_filename = "scores.xml"
 
-let text_placement : XNAUtils.MenuScreen.PlacementParameters =
+let text_placement =
     { left = 100.0f;
       top = 100.0f;
       spacing = 20.0f }
+
+let menu_placement =
+    { left = 300.0f;
+      top = 100.0f;
+      spacing = 40.0f }
+
+let menu_animation =
+    { period = 0.2f;
+      shift = 0.05f }
 
 let mkInstructions(controlling_player, sys) =
     let lines =
