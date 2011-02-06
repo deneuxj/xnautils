@@ -189,5 +189,9 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
         scheduler.RunFor(float32 gt.ElapsedGameTime.TotalSeconds)
 
+        match scheduler.Exceptions with
+        | e :: _ -> raise (new System.Exception("A task raised an exception", e))
+        | _ -> ()
+
     override this.Draw(gt) =
         base.Draw(gt)
