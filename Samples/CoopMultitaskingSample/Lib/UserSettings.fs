@@ -7,17 +7,21 @@ open XNAUtils.ScreenManager
 open XNAUtils.MenuScreen
 open XNAUtils.StorageTasks
 
+type FontSize =
+    | Small = 0
+    | Medium = 1
+    | Large = 2
 
 type ISettingsNotifiable =
     interface
         abstract member SetBackgroundColor : Color -> unit
-        abstract member SetFontSize : float32 -> unit
+        abstract member SetFontSize : FontSize -> unit
     end
 
 
 type Data() =
     let background_color = ref Color.CornflowerBlue
-    let font_size = ref 1.0f
+    let font_size = ref FontSize.Medium
 
     member this.BackgroundColor
         with get() = !background_color
@@ -50,7 +54,7 @@ type Colors =
     | CadetBlue
     | Reset
 
-type FontSizes =
+type FontSizeEntries =
     | Small
     | Medium
     | Large
@@ -81,14 +85,14 @@ let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data 
             [| (Small, "Small");
                (Medium, "Medium");
                (Large, "Large");
-               (FontSizes.Reset, "Reset") |]
-        use font_menu = new MenuScreen<FontSizes>(player, sys, menu_items, anim, placement)
+               (Reset, "Reset") |]
+        use font_menu = new MenuScreen<_>(player, sys, menu_items, anim, placement)
         sm.AddScreen(font_menu)
         let! choice = font_menu.Task
         match choice with
-        | Some Medium | Some FontSizes.Reset -> data.FontSize <- 1.0f
-        | Some Small -> data.FontSize <- 0.5f
-        | Some Large -> data.FontSize <- 1.5f
+        | Some Medium | Some Reset -> data.FontSize <- FontSize.Medium
+        | Some Small -> data.FontSize <- FontSize.Small
+        | Some Large -> data.FontSize <- FontSize.Large
         | None -> ()
         sm.RemoveScreen(font_menu)
         return data

@@ -162,9 +162,20 @@ namespace CoopMultiTaskingSample
       clearColor = value;
     }
 
-    void UserSettings.ISettingsNotifiable.SetFontSize(float value)
+    void UserSettings.ISettingsNotifiable.SetFontSize(UserSettings.FontSize sz)
     {
-      font = value < 1.0f ? smallFont : value > 1.0f ? bigFont : mediumFont;
+      switch (sz)
+      {
+        case UserSettings.FontSize.Large:
+          font = bigFont;
+          break;
+        case UserSettings.FontSize.Medium:
+          font = mediumFont;
+          break;
+        case UserSettings.FontSize.Small:
+          font = smallFont;
+          break;
+      }
     }
   }
 }
