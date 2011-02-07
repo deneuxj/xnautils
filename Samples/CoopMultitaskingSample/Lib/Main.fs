@@ -24,6 +24,7 @@ type MainMenuEntries =
     | Options
     | Scores
     | Credits
+    | BuyFullVersion
     | Exit
 
 
@@ -78,10 +79,44 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                    Options, "Options"
                    Scores, "Scores"
                    Credits, "More information"
+                   BuyFullVersion, "BuyFullVersion"
                    Exit, "Exit" |],
                 menu_animation,
                 menu_placement
             )
+
+        // Hide and disable entries depending on whether we are running the full version.
+        if Guide.IsTrialMode then
+            menu.Disable(Credits)
+        else
+            menu.Hide(BuyFullVersion)
+
+        // If running in trial mode, run a "watcher" that detects when the user unlocks the full version.
+        // When that happens, hide BuyFullVersion and enable Credits in the menu.
+        let maybe_buy_watcher =
+            if Guide.IsTrialMode then
+                let rec watcher killed = task {
+                    if not !killed then
+                        if not Guide.IsTrialMode then
+                            menu.Hide(BuyFullVersion)
+                            menu.Show(Credits)
+                        else
+                            do! sys.WaitNextFrame()
+                            return! watcher killed
+                }
+                sys.Spawn(watcher)
+                |> Some
+            else
+                None
+
+        // Kill the watcher when the iteration of the menu loop ends.
+        use _ =
+            { new System.IDisposable with
+                member this.Dispose() =
+                    match maybe_buy_watcher with
+                    | Some w -> w.Kill()
+                    | None -> ()
+            }
 
         // Show the menu
         screen_manager.AddScreen(menu)
@@ -198,6 +233,20 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             do! info.Task
             screen_manager.RemoveScreen(info)
             return! menu_loop controlling_player
+
+        // The user wants to buy the full version
+        | Some BuyFullVersion ->
+            // check if the user has the rights
+            match Gamer.SignedInGamers.ItemOpt(controlling_player) with
+            | Some player ->
+                if player.Privileges.AllowPurchaseContent then
+                    do! doOnGuide <| fun() -> Guide.ShowMarketplace(controlling_player)
+                else
+                    do! doOnGuide <| fun() -> error "You do not have the permissions to buy content."
+            | None ->
+                do! doOnGuide <| fun() -> error "You must be signed in to buy content."
+            return! menu_loop controlling_player
+
     }
 
     // The main task, which shows the "press start" screen and then shows the main menu.
