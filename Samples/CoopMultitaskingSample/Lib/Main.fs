@@ -94,7 +94,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
         // Deal with the selection in the menu.
         match action with
-        // B or back pressed, leave the menu loop and go back to the "press start screen"
+        // Menu was cancelled (B, Back, sign-out), leave the menu loop and go back to the "press start" screen.
         | None -> ()
         
         // Back to the board.
@@ -130,6 +130,14 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                     | Some player -> player.Gamertag
                 let is_hiscore = (!scores).AddScore(player_name, points)
                 if is_hiscore then
+                    // save the scores.
+                    if storage.TitleStorage.IsSome then
+                        do! storage.CheckTitleStorage
+                        let! result = storage.DoTitleStorage(score_container, saveXml score_filename !scores)
+                        match result with
+                        | Some(Some()) -> ()
+                        | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
+                    // Show the scores screen.
                     do! showScores
 
             // Continue looping. Note the use of "return!" instead of "do!".
@@ -262,15 +270,6 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
 
                 // Go into the main menu loop
                 do! menu_loop controlling_player
-
-                // the player is done, save the scores.
-                if storage.TitleStorage.IsSome then
-                    do! storage.CheckTitleStorage
-                    let! result = storage.DoTitleStorage(score_container, saveXml score_filename !scores)
-                    match result with
-                    | Some(Some()) -> ()
-                    | _ -> do! doOnGuide <| fun() -> error "Failed to save scores"
-
     }
 
     // Add the main task to the scheduler.
