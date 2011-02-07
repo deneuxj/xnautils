@@ -239,7 +239,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             // check if the user has the rights
             match Gamer.SignedInGamers.ItemOpt(controlling_player) with
             | Some player ->
-                if player.Privileges.AllowPurchaseContent then
+                if player.IsSignedInToLive && player.Privileges.AllowPurchaseContent then
                     do! doOnGuide <| fun() -> Guide.ShowMarketplace(controlling_player)
                 else
                     do! doOnGuide <| fun() -> error "You do not have the permissions to buy content."
