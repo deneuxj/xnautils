@@ -93,6 +93,11 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
 
         System.Diagnostics.Debug.WriteLine(sprintf "Screen %s removed." (s.GetType().Name))
 
+    member this.RemoveAllScreens() =
+        let tmp = screens.ToArray()
+        for s in tmp do
+            this.RemoveScreen(s)
+
     member this.UiContent = ui_content_provider
 
 // A screen implementation that provides its own content manager and access to the game object.
