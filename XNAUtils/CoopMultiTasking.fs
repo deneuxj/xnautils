@@ -211,6 +211,13 @@ type Scheduler() =
 
     member x.GetTicks() = !ticks
 
+    member x.WakeAll() =
+        while not (Heap.isEmpty waiting) do
+            let f, _ = peekWaitingTask()
+            takeWaitingTask()
+            CircularQueue.add ready f
+            
+
     // Run tasks for the current frame. dt is the frame time (typically 0.016666... on Xbox for 60 fps)
     member x.RunFor(dt) =
         let end_frame = !ticks + deltaToTicks dt
@@ -311,8 +318,22 @@ type Stopwatch internal (sch : Scheduler) =
         with get() = is_running
 
 
+exception TaskKilled of obj
+
 // An "operating system API" to be used from tasks.
 type Environment(scheduler : Scheduler) =
+    // When killing all tasks, the data to embed in TaskKilled exceptions.
+    let killing_data : obj option ref = ref None
+
+    let checkAndKill = task {
+        match !killing_data with
+        | Some o -> raise(TaskKilled(o))
+        | None -> ()
+    }
+
+    member this.KillAll(data) =
+        killing_data := Some data
+        scheduler.WakeAll()
 
     // Spawn a new concurrent subtask.
     // The subtask must take a reference to a bool which indicates (when true) when the task should terminate itself.
@@ -346,20 +367,34 @@ type Environment(scheduler : Scheduler) =
 
         TaskController(kill, killed)
 
-    member this.Wait dt = wait dt
+    member this.Wait dt = task {
+        do! wait dt
+        do! checkAndKill
+    }
 
-    member this.Yield() = nextTask()
+    member this.Yield() = task {
+        do! nextTask()
+        do! checkAndKill
+    }
 
-    member this.WaitNextFrame() = nextFrame()
+    member this.WaitNextFrame() = task {
+        do! nextFrame()
+        do! checkAndKill
+    }
 
-    member this.WaitUntil cond = waitUntil cond
+    member this.WaitUntil cond = task {
+        do! waitUntil cond
+        do! checkAndKill
+    }
 
     member this.WaitUnless(dt, cond) = task {
         let watch = new Stopwatch(scheduler)
         watch.Start()
         do! nextTask()
+        do! checkAndKill
         while not (watch.ElapsedSeconds >= dt || cond()) do
             do! nextFrame()
+            do! checkAndKill
     }
 
     member this.NewLock() = new Lock()
