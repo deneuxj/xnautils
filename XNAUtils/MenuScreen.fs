@@ -95,17 +95,14 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
             // We don't want to react to input that's not for us.
             do! sys.WaitUntil(fun () -> this.IsOnTop)
 
-            if GamerServices.Gamer.IsSignedIn(player) then
-                input.Update()
+            input.Update()
 
-                if input.IsMenuDown() then moveDown()
-                elif input.IsMenuUp() then moveUp()
-                elif input.IsStartPressed() then selected := true
-                elif input.IsBackPressed() then backed := true
+            if input.IsMenuDown() then moveDown()
+            elif input.IsMenuUp() then moveUp()
+            elif input.IsStartPressed() then selected := true
+            elif input.IsBackPressed() then backed := true
 
-                do! sys.WaitNextFrame()
-            else
-                backed := true
+            do! sys.WaitNextFrame()
 
         animator.Kill()
         do! sys.WaitUntil(fun() -> animator.IsDead)

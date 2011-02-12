@@ -27,7 +27,7 @@ type ResultScreen(sys : Environment, player, reason) =
 
     let rec wait() = task {
         input.Update()
-        if not (input.IsStartPressed()) && GamerServices.Gamer.IsSignedIn(player) then
+        if not (input.IsStartPressed()) then
             do! sys.WaitNextFrame()
             return! wait()
     }

@@ -17,6 +17,47 @@ open MiscScreens
 open UserSettings
 open ScoreScreen
 
+// The state of the top level, used to react to sign-out.
+type TopState =
+    | Initializing
+    | AtPressStartScreen
+    | AnonPlayer
+    | Player of SignedInGamer
+    | KillingAllTasks
+with
+    member this.Update(transition) =
+        match this, transition with
+        | Initializing, InitDone -> AtPressStartScreen
+        | Initializing, _ -> invalidOp "Invalid transition from Initializing"
+
+        | AtPressStartScreen, AnonPressedStart -> AnonPlayer
+        | AtPressStartScreen, PlayerPressedStart(p) -> Player p
+        | AtPressStartScreen, _ -> invalidOp "Invalid transition from AtPressStartScreen"
+
+        | AnonPlayer, Back -> AtPressStartScreen
+        | AnonPlayer, _ -> invalidOp "Invalid transition from AnonPlayer"
+
+        | Player p, SignOut -> KillingAllTasks
+        | Player p, Back -> AtPressStartScreen
+        | Player p, _ -> invalidOp "Invalid transition from Player"
+
+        | KillingAllTasks, AllTasksKilled -> Initializing
+        | KillingAllTasks, _ -> invalidOp "Invalid transition from KillingAllTasks"
+
+and TopStateTransition =
+    | InitDone
+    | AnonPressedStart
+    | PlayerPressedStart of SignedInGamer
+    | SignOut
+    | AllTasksKilled
+    | Back
+
+
+type SignedInRequirement =
+    | Free = 0
+    | ShouldSignIn = 1
+    | MustSignIn = 2
+
 // Entries in the main menu.
 type MainMenuEntries =
     | Play
@@ -31,11 +72,19 @@ type MainMenuEntries =
 // The "main" class, which manages the top levels of the screen hierarchy.
 // The type parameter 'G is the type of the game class created in the C# top-level.
 // ISettingsNotifiable is an interface that components affected by user settings must implement.
-type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_manager : ScreenManager) =
+type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_manager : ScreenManager, sign_in_req) =
     inherit DrawableGameComponent(game)
+
+    // Keep track of the top state.
+    let top_state = ref Initializing
+    
+    // List of top state transition requests
+    let transition_requests = ref []
 
     // The scheduler which executes slices of tasks every update cycle.
     let scheduler = new Scheduler()
+
+    // The environment which tasks use to interact with the scheduler.
     let sys = new Environment(scheduler)
 
     // The storage component, makes loading/saving easier.
@@ -62,9 +111,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         // A task to show a table of the 10 best scores, and wait for a button press.
         let showScores = task {
             use score_screen = new ScoreScreen(sys, controlling_player, !scores)
-            screen_manager.AddScreen(score_screen)
-            do! score_screen.Task
-            screen_manager.RemoveScreen(score_screen)
+            return! screen_manager.AddDoRemove(score_screen, score_screen.Task)
         }
 
         // The menu screen.
@@ -119,13 +166,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             }
 
         // Show the menu
-        screen_manager.AddScreen(menu)
-
-        // Run the menu: handle up/down and button presses.
-        let! action = menu.Task
-
-        // Hide the menu
-        screen_manager.RemoveScreen(menu)
+        let! action = screen_manager.AddDoRemove(menu, menu.Task)
 
         // Deal with the selection in the menu.
         match action with
@@ -141,14 +182,8 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             // Create the screen showing the game.
             use gameplay = new GameplayScreen(sys, controlling_player)
 
-            // Show the gameplay screen.
-            screen_manager.AddScreen(gameplay)
-
-            // Gameplay happens inside gameplay.Task
-            let! gameplay_result = gameplay.Task
-
-            // Hide the gameplay screen.
-            screen_manager.RemoveScreen(gameplay)
+            // Show the gameplay screen. Gameplay itself is in gameplay.Task
+            let! gameplay_result = screen_manager.AddDoRemove(gameplay, gameplay.Task)
 
             // If the game wasn't aborted, and if a new high score was achieved,
             // add it to the score table and show the table.
@@ -156,9 +191,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             | Aborted _ -> ()
             | TooEarly (_, points) | TooLate (_, points) ->
                 use results = new ResultScreen(sys, controlling_player, gameplay_result)
-                screen_manager.AddScreen(results)
-                do! results.Task
-                screen_manager.RemoveScreen(results)
+                do! screen_manager.AddDoRemove(results, results.Task)
                 let player_name =
                     match SignedInGamer.SignedInGamers.ItemOpt(controlling_player) with
                     | None -> "Unknown"
@@ -182,9 +215,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         // Show a screen of text with instructions on how to play the game.
         | Some Instructions ->
             use instructions = mkInstructions(controlling_player, sys)
-            screen_manager.AddScreen(instructions)
-            do! instructions.Task
-            screen_manager.RemoveScreen(instructions)
+            do! screen_manager.AddDoRemove(instructions, instructions.Task)
             return! menu_loop controlling_player
 
         // Show and set user settings.
@@ -192,9 +223,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             use settings_screen = mkUserSettingsScreen controlling_player sys menu_animation menu_placement storage
             // A recursive function that repeatedly shows the user settings menu.
             let rec work () = task {
-                screen_manager.AddScreen(settings_screen)
-                let! choice = settings_screen.Task
-                screen_manager.RemoveScreen(settings_screen)
+                let! choice = screen_manager.AddDoRemove(settings_screen, settings_screen.Task)
                 match choice with
                 | Some _ ->
                     let! data' = handleUserSettingsMenu controlling_player sys menu_animation menu_placement screen_manager !settings choice
@@ -229,9 +258,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
         // Show a screen of text with pointers to F# and XNA.
         | Some Credits ->
             use info = mkInfo(controlling_player, sys)
-            screen_manager.AddScreen(info)
-            do! info.Task
-            screen_manager.RemoveScreen(info)
+            do! screen_manager.AddDoRemove(info, info.Task)
             return! menu_loop controlling_player
 
         // The user wants to buy the full version
@@ -264,21 +291,15 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             use press_start = new PressStartScreen(sys, 0.5f, 0.1f, 0.5f)
 
             // Show it.
-            screen_manager.AddScreen(press_start)
+            let! controlling_player = screen_manager.AddDoRemove(press_start, press_start.Task)
 
-            // Execute the screen's task, which does two things:
-            // - Take care of fade-in/out and blinking effects
-            // - Watch all controllers for a button press.
-            let! controlling_player = press_start.Task
-            screen_manager.RemoveScreen(press_start)
-
-            // Ask the player to sign in unless already signed in.
-            if not(Gamer.IsSignedIn(controlling_player)) then
+            // Ask the player to sign in unless already signed in or there are no sign in requirement.
+            if sign_in_req <> SignedInRequirement.Free && not(Gamer.IsSignedIn(controlling_player)) then
                 do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
                 do! sys.WaitUntil(fun () -> not (Guide.IsVisible))
 
-            // Proceed only if the user actually signed in.
-            if not(Gamer.IsSignedIn(controlling_player)) then
+            // Proceed only if the user actually signed in unless signing in is not strictly required.
+            if sign_in_req = SignedInRequirement.MustSignIn && not(Gamer.IsSignedIn(controlling_player)) then
                 do! doOnGuide <| fun () -> error "You must sign in to play this game."
             else
                 // Ask the user to choose for a storage device used for the scores.
@@ -317,27 +338,58 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                 }
                 scores := data
 
+                transition_requests :=
+                    if Gamer.IsSignedIn(controlling_player) then
+                        PlayerPressedStart (Gamer.SignedInGamers.ItemOpt(controlling_player).Value)
+                    else
+                        AnonPressedStart
+                    :: !transition_requests
+
                 // Go into the main menu loop
                 do! menu_loop controlling_player
-    }
 
-    // Add the main task to the scheduler.
-    override this.Initialize() =
-        scheduler.AddTask(main_task)
-        base.Initialize()
+                transition_requests := Back :: !transition_requests
+    }
 
     // Every update cycle, instruct the scheduler to run slices of all tasks that
     // are registered.
     override this.Update(gt) =
-        if not(scheduler.HasLiveTasks) then
+        // Deal with transition requests for the top state
+        for t in List.rev !transition_requests do
+            top_state := (!top_state).Update(t)
+        transition_requests := []
+
+        // Initialization and killing of tasks.
+        // Killing happens when a signed in player signs out.
+        // Initialization happens during start-up and after killing.
+        match !top_state with
+        | Initializing ->
+            scheduler.AddTask(main_task)
+            top_state := (!top_state).Update(InitDone)
+        | Player p when not(Gamer.IsSignedIn(p.PlayerIndex)) ->
+            top_state := (!top_state).Update(SignOut)
+            sys.StartKillAll(null)
+        | KillingAllTasks when not(scheduler.HasLiveTasks) ->
+            sys.StopKillAll()
+            top_state := (!top_state).Update(AllTasksKilled)
+            // Ideally, screen removal is done in finally handlers, and
+            // killing should take care of removing all screens.
+            // Nevertheless, we remove all screens here to be on the safe side.
+            screen_manager.RemoveAllScreens()
+        | _ -> ()
+
+        if not(scheduler.HasLiveTasks) && !top_state <> KillingAllTasks && !top_state <> Initializing then
             game.Exit()
 
         scheduler.RunFor(float32 gt.ElapsedGameTime.TotalSeconds)
 
-        // If exceptions were raised and left uncaught, re-raise the first exception.
+        // If exceptions other than TaskKilled were raised and left uncaught, re-raise them.
         // This will cause the game to die "properly", showing an error message box.
         // For a game that's been made avalaible on the market, this should never happen.
         // Nevertheless, silently ignoring exceptions is not a good idea.
-        match scheduler.Exceptions with
-        | e :: _ -> raise (new System.Exception("A task raised an exception", e))
-        | _ -> ()
+        for e in
+            scheduler.Exceptions
+            |> List.filter(fun e -> not(e :? TaskKilled))
+            do
+            raise (new System.Exception("A task raised an exception", e))
+        scheduler.ClearExceptions()

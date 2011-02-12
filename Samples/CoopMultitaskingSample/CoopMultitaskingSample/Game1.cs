@@ -58,7 +58,7 @@ namespace CoopMultiTaskingSample
     {
       // TODO: Add your initialization logic here
       screenManager = new ScreenManager.ScreenManager(this, (ScreenManager.IUiContentProvider)this);
-      mainComponent = new Main.Main<Game1>(this, screenManager);
+      mainComponent = new Main.Main<Game1>(this, screenManager, Main.SignedInRequirement.MustSignIn);
       base.Components.Add(screenManager);
       base.Components.Add(mainComponent);
 

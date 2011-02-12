@@ -20,12 +20,10 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
         let animator = sys.Spawn(animation.Task)
 
-        // Wait until the player signs off or presses a button.
+        // Wait until the player presses a button.
         while
-            GamerServices.Gamer.IsSignedIn(player)
-            && not (this.IsOnTop
-                    && (input.IsBackPressed()
-                        || input.IsStartPressed())) do
+            not (this.IsOnTop
+                 && (input.IsBackPressed() || input.IsStartPressed())) do
             input.Update()
             do! sys.WaitNextFrame()
 

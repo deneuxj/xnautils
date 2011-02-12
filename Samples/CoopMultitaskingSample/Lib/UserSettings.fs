@@ -70,15 +70,13 @@ let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data 
                (CadetBlue, "CadetBlue");
                (Colors.Reset, "Reset to default") |]
         use color_menu = new MenuScreen<Colors>(player, sys, menu_items, anim, placement)
-        sm.AddScreen(color_menu)
-        let! choice = color_menu.Task
+        let! choice = sm.AddDoRemove(color_menu, color_menu.Task)
         match choice with
         | Some AliceBlue -> data.BackgroundColor <- Color.AliceBlue
         | Some CornflowerBlue | Some Colors.Reset -> data.BackgroundColor <- Color.CornflowerBlue
         | Some BlueViolet -> data.BackgroundColor <- Color.BlueViolet
         | Some CadetBlue -> data.BackgroundColor <- Color.CadetBlue
         | None -> ()
-        sm.RemoveScreen(color_menu)
         return data
     | Some SetFontSize ->
         let menu_items = 
@@ -87,14 +85,12 @@ let handleUserSettingsMenu player sys anim placement (sm : ScreenManager) (data 
                (Large, "Large");
                (Reset, "Reset") |]
         use font_menu = new MenuScreen<_>(player, sys, menu_items, anim, placement)
-        sm.AddScreen(font_menu)
-        let! choice = font_menu.Task
+        let! choice = sm.AddDoRemove(font_menu, font_menu.Task)
         match choice with
         | Some Medium | Some Reset -> data.FontSize <- FontSize.Medium
         | Some Small -> data.FontSize <- FontSize.Small
         | Some Large -> data.FontSize <- FontSize.Large
         | None -> ()
-        sm.RemoveScreen(font_menu)
         return data
     | None ->
         return data

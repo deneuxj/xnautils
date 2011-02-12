@@ -59,7 +59,7 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
 
         base.Draw(gt)
 
-    member this.AddScreen(s : Screen) =
+    member private this.AddScreen(s : Screen) =
         match get_top_screen() with
         | Some top -> top.SetIsOnTop(false)
         | None -> ()
@@ -92,6 +92,16 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
         s.ClearScreenManager()
 
         System.Diagnostics.Debug.WriteLine(sprintf "Screen %s removed." (s.GetType().Name))
+
+    // A task that adds a screen, executes a given task then removes the screen.
+    // Screen removal is guaranteed using finally.
+    member this.AddDoRemove(s : Screen, t : Eventually<'T>) = task {
+        try
+            this.AddScreen(s)
+            return! t
+        finally
+            this.RemoveScreen(s)
+    }
 
     member this.RemoveAllScreens() =
         let tmp = screens.ToArray()
