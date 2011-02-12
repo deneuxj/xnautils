@@ -94,22 +94,22 @@ type TaskBuilder() =
 let task = TaskBuilder()
 
 // Wait a fixed amount of time.
-let wait dt =
+let internal wait dt =
     Blocked(dt, fun () -> Completed())
 
 // Wait until next frame, i.e. next call to Scheduler.RunFor
-let nextFrame () =
+let internal nextFrame () =
     BlockedNextFrame(fun() -> Completed())
 
 // Stop executing, let some other task execute, if any is ready. Otherwise, we get control back.
-let nextTask () =
+let internal nextTask () =
     Yield(fun() -> Completed())
 
 // Wait until a specified condition is true.
 // nextTask is always called, then the condition is checked.
 // If it's false, we wait until next frame, check the condition,
 // call nextTask if it's not true, and so on...
-let waitUntil f = task {
+let internal waitUntil f = task {
     let stop = ref false
     while not !stop do
         do! nextTask()
@@ -268,7 +268,7 @@ type Scheduler() =
 
     member x.HasExceptions = not (List.isEmpty !exceptions)
 
-    member x.ClearExceptions = exceptions := []
+    member x.ClearExceptions() = exceptions := []
 
 
 let toEventuallyObj ev = task {
@@ -331,9 +331,12 @@ type Environment(scheduler : Scheduler) =
         | None -> ()
     }
 
-    member this.KillAll(data) =
+    member this.StartKillAll(data) =
         killing_data := Some data
         scheduler.WakeAll()
+
+    member this.StopKillAll() =
+        killing_data := None
 
     // Spawn a new concurrent subtask.
     // The subtask must take a reference to a bool which indicates (when true) when the task should terminate itself.
@@ -342,9 +345,10 @@ type Environment(scheduler : Scheduler) =
         let killed = ref false
 
         let once_t = task {
+            do! checkAndKill
             do! t kill
+            do! checkAndKill
             killed := true
-            do! nextTask()
         }
 
         scheduler.AddTask(once_t)
@@ -368,26 +372,31 @@ type Environment(scheduler : Scheduler) =
         TaskController(kill, killed)
 
     member this.Wait dt = task {
+        do! checkAndKill
         do! wait dt
         do! checkAndKill
     }
 
     member this.Yield() = task {
+        do! checkAndKill
         do! nextTask()
         do! checkAndKill
     }
 
     member this.WaitNextFrame() = task {
+        do! checkAndKill
         do! nextFrame()
         do! checkAndKill
     }
 
     member this.WaitUntil cond = task {
-        do! waitUntil cond
+        do! checkAndKill
+        do! waitUntil (fun () -> cond() || (!killing_data).IsSome)
         do! checkAndKill
     }
 
     member this.WaitUnless(dt, cond) = task {
+        do! checkAndKill
         let watch = new Stopwatch(scheduler)
         watch.Start()
         do! nextTask()
