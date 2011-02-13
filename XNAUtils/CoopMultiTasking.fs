@@ -226,7 +226,13 @@ type Scheduler() =
         let executeReady() =
             while not (CircularQueue.isEmpty ready) do
                 let f = CircularQueue.pick ready
-                let mutable t = f()
+                let mutable t =
+                    try
+                        f()
+                    with
+                    | e ->
+                        exceptions := e :: !exceptions
+                        Completed()
                 while
                         match t with
                         | Running f -> true
