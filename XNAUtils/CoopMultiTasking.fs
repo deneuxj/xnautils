@@ -167,9 +167,19 @@ type BlockingChannel<'M>() =
 
 (* Execution *)
 
+type SleepingTaskTuple =
+    struct
+        val f : unit -> Eventually<unit>
+        val release_at : int64
+
+        new (f, r) = { f = f; release_at = r }
+
+        static member CompareLTE(A : SleepingTaskTuple, B : SleepingTaskTuple) = A.release_at <= B.release_at
+    end
+
 type Scheduler() =
     // Ordered queue of tasks that are waiting (Blocked). The integer indicates the time in ticks when the task will wake up.
-    let waiting : Heap.Heap<(unit -> Eventually<unit>) * int64> = Heap.newHeap 4
+    let waiting : Heap.Heap<SleepingTaskTuple> = Heap.newHeap 4
 
     // Circular queue of tasks that are ready to execute (Running, or Yield).
     let ready : CircularQueue.CircularQueue<unit -> Eventually<unit>> = CircularQueue.newQueue 4
@@ -181,18 +191,15 @@ type Scheduler() =
 
     let exceptions = ref []
 
-    // Ordering of tasks in the waiting queue.
-    let cmp ((ev1, n1), (ev2, n2)) = n1 <= n2
-
     let peekWaitingTask() =
         waiting.arr.[0]
 
     let insertWaitingTask(delay, f) =
         let release = !ticks + int64 (delay * 10000000.0f)
-        Heap.insert cmp waiting (f, release)
+        Heap.insert SleepingTaskTuple.CompareLTE waiting (new SleepingTaskTuple(f, release))
 
     let takeWaitingTask() =
-        Heap.take cmp waiting |> ignore
+        Heap.take SleepingTaskTuple.CompareLTE waiting |> ignore
 
     let deltaToTicks dt =
         int64 (dt * 10000000.0f)
@@ -213,7 +220,7 @@ type Scheduler() =
 
     member x.WakeAll() =
         while not (Heap.isEmpty waiting) do
-            let f, _ = peekWaitingTask()
+            let f = peekWaitingTask().f
             takeWaitingTask()
             CircularQueue.add ready f
             
@@ -253,7 +260,9 @@ type Scheduler() =
         // Move waiting tasks that wake up within this frame to the ready queue and execute them
         let rec executeWaiting() =
             if !ticks < end_frame && waiting.count > 0 then
-                let (f, release) = peekWaitingTask()
+                let tuple = peekWaitingTask()
+                let f = tuple.f
+                let release = tuple.release_at
                 if release < end_frame then
                     ticks := release
                     takeWaitingTask()
