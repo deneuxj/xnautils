@@ -24,6 +24,7 @@ type TopState =
     | AnonPlayer
     | Player of SignedInGamer
     | KillingAllTasks
+    | Exiting
 with
     member this.Update(transition) =
         match this, transition with
@@ -33,6 +34,8 @@ with
         | AtPressStartScreen, AnonPressedStart -> AnonPlayer
         | AtPressStartScreen, PlayerPressedStart(p) -> Player p
         | AtPressStartScreen, _ -> invalidOp "Invalid transition from AtPressStartScreen"
+
+        | AnonPlayer, ExitGame | Player _, ExitGame -> Exiting
 
         | AnonPlayer, Back -> AtPressStartScreen
         | AnonPlayer, _ -> invalidOp "Invalid transition from AnonPlayer"
@@ -44,6 +47,9 @@ with
         | KillingAllTasks, AllTasksKilled -> Initializing
         | KillingAllTasks, _ -> invalidOp "Invalid transition from KillingAllTasks"
 
+        | Exiting, _ -> invalidOp "Invalid transition from Exiting"
+
+
 and TopStateTransition =
     | InitDone
     | AnonPressedStart
@@ -51,6 +57,7 @@ and TopStateTransition =
     | SignOut
     | AllTasksKilled
     | Back
+    | ExitGame
 
 
 type SignedInRequirement =
@@ -348,7 +355,11 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
                 // Go into the main menu loop
                 do! menu_loop controlling_player
 
-                transition_requests := Back :: !transition_requests
+                transition_requests :=
+                    if !exit_game then
+                        ExitGame :: !transition_requests
+                    else
+                        Back :: !transition_requests
     }
 
     // Every update cycle, instruct the scheduler to run slices of all tasks that
@@ -378,10 +389,13 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             screen_manager.RemoveAllScreens()
         | _ -> ()
 
-        if not(scheduler.HasLiveTasks) && !top_state <> KillingAllTasks && !top_state <> Initializing then
+        // Exit the game if we are exiting and all tasks have completed.
+        if not(scheduler.HasLiveTasks) && !top_state = Exiting then
             game.Exit()
 
-        scheduler.RunFor(float32 gt.ElapsedGameTime.TotalSeconds)
+        // Update screens when the game is active.
+        if game.IsActive then
+            scheduler.RunFor(float32 gt.ElapsedGameTime.TotalSeconds)
 
         // If exceptions other than TaskKilled were raised and left uncaught, re-raise them.
         // This will cause the game to die "properly", showing an error message box.
