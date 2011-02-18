@@ -25,11 +25,11 @@ type ResultScreen(sys : Environment, player, reason) =
     let input = new InputChanges(player)
     let blink = new XNAUtils.Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.5f, 0.1f)
 
-    let rec wait() = task {
+    member private this.Wait() = task {
         input.Update()
-        if not (input.IsStartPressed()) then
+        if not (this.IsActive && input.IsStartPressed()) then
             do! sys.WaitNextFrame()
-            return! wait()
+            return! this.Wait()
     }
 
     member this.Task = task {
@@ -37,7 +37,7 @@ type ResultScreen(sys : Environment, player, reason) =
 
         let blinker = sys.Spawn(blink.Task)
         
-        do! wait()
+        do! this.Wait()
 
         blinker.Kill()
         do! sys.WaitUntil(fun () -> blinker.IsDead)

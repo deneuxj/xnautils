@@ -71,7 +71,7 @@ type ScoreScreen(sys : Environment, player : PlayerIndex, scores : Scores) =
 
         this.SetDrawer(this.DrawScores)
 
-        do! sys.WaitUntil(fun() -> input.IsStartPressed() || input.IsBackPressed())
+        do! sys.WaitUntil(fun() -> this.IsActive && (input.IsStartPressed() || input.IsBackPressed()))
 
         input_updater.Kill()
         return! sys.WaitUntil(fun() -> input_updater.IsDead)

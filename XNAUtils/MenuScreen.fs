@@ -93,7 +93,7 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
         while not (!selected || !backed) do
             // If this screen is not active, i.e. it is not on top or the guide is visible, wait.
             // We don't want to react to input that's not for us.
-            do! sys.WaitUntil(fun () -> this.IsOnTop)
+            do! sys.WaitUntil(fun () -> this.IsActive)
 
             input.Update()
 

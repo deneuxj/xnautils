@@ -27,7 +27,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
         // Task to check if a button is pressed. Sets player when that happens.
         let player : PlayerIndex option ref = ref None
         while (!player).IsNone do
-            do! sys.WaitUntil(fun () -> this.IsOnTop)
+            do! sys.WaitUntil(fun () -> this.IsActive)
             for p in all_players do
                 let state = GamePad.GetState(p)
                 if state.IsConnected

@@ -22,7 +22,7 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
         // Wait until the player presses a button.
         while
-            not (this.IsOnTop
+            not (this.IsActive
                  && (input.IsBackPressed() || input.IsStartPressed())) do
             input.Update()
             do! sys.WaitNextFrame()
