@@ -31,8 +31,6 @@ type GameplayScreen(sys : Environment, player) =
     let target_pos = ref None
     let score_mult = 10000.0
 
-    let input = new InputChanges(player)
-
     let rnd = new System.Random()
 
     // Get a random number which is not currently visible in the matrix.    
@@ -140,23 +138,33 @@ type GameplayScreen(sys : Environment, player) =
 
     // The main task for this screen.
     member this.Task = task {
+
+        // The matrix update period.
         let swap_period = 0.1f
 
-        // Initialisation
+        // The first target number.
         target := rnd.Next(100)
+
+        // Fill in the matrix with non-target numbers.
         for i in 0..2 do
             for j in 0..2 do
                 numbers.[i,j] <- nextNonTarget()
-        let watch = sys.NewStopwatch()
+
+        // The score: measures how fast the player reacts to the target number appearing in the matrix.
         let score = ref 0.0
+
+        // Maximum amount of time the player has to react to the target number appearing in the matrix.
+        // Decreased after each successful button press.
         let grace_time = ref 5.0
+
+        // True of the player failed to react within the grace time.
         let has_missed = ref false
+
+        // True if the player pressed the button when the target number was not visible.
         let has_cheated = ref false
+
+        // True if the user selects "Abort" in the pause menu.
         let has_aborted = ref false
-        let score_updater =
-            sys.Spawn(this.UpdateScore 0.0 0.0 0.0)
-            |> Some
-            |> ref
 
         // Draw the score, the target and the matrix
         // Note that it's possible to embedd rendering code inside the update code,
@@ -168,52 +176,68 @@ type GameplayScreen(sys : Environment, player) =
             >> this.DrawTarget
             >> this.DrawMatrix)
 
-        // Loop until the player loses or aborts.
-        while not (!has_missed || !has_cheated || !has_aborted) do
+        let gameIsOver() = (!has_missed || !has_cheated || !has_aborted)
 
-            // Start/Stop the stopwatch, depending on whether the target number is visible and the game is paused.
-            match !target_pos, this.IsActive with
-            | Some _, false -> if watch.IsRunning then watch.Stop()
-            | Some _, true -> if not watch.IsRunning then watch.Start()
-            | None, _ -> ()
+        // A task that pauses and resumes a watch depending on whether the screen is active or not.
+        // Meant to be spawned with SpawnRepeat.
+        let controlWatch (watch : Stopwatch) = task {
+            match this.IsActive, watch.IsRunning with
+            | false, true -> watch.Stop()
+            | true, false -> watch.Start()
+            | false, false | true, true -> ()
+            return! sys.WaitNextFrame()
+        }
 
-            // Wait until the game is no longer paused (or continue if it's not paused).
-            do! sys.WaitUntil(fun () -> this.IsActive)
+        // The watch used to measure the player's reaction time, i.e.
+        // the time between the target number becomes visible and the
+        // user presses A.
+        let reaction_watch = sys.NewStopwatch()
 
-            if input.IsButtonPress(Buttons.Start) then
-                // The user pressed start, bring up a pause menu
-                // First stop the timer.
-                let was_running = watch.IsRunning
-                watch.Stop()
+        // A task that updates the matrix at regular intervals.
+        let updateMatrix killed = task {
+            let watch = sys.NewStopwatch()
+            let watch_controller = sys.SpawnRepeat(controlWatch watch)
 
-                let! resume_chosen = this.ShowPause
-                if not resume_chosen then
-                    has_aborted := true
-                
-                // Resume the timer if it was running when we stopped it.
-                if was_running then watch.Start()
+            while not(gameIsOver() || !killed) do
+                if watch.ElapsedSeconds >= swap_period then
+                    watch.Reset()
+                    // Decide if we make the target number appear in the matrix at some random position...
+                    if (!target_pos).IsNone && flipTarget() then
+                        let i, j = rnd.Next(3), rnd.Next(3)
+                        target_pos := Some (i, j)
+                        numbers.[i, j] <- !target
+                        reaction_watch.Reset() // No need to start the watch, controlWatch takes care of that.
+                    else
+                        // ... or flip some position in the matrix to a number that is not the target.
+                        distract()
+                do! sys.WaitNextFrame()
 
-            else
+            watch_controller.Kill()
+            return! sys.WaitUntil(fun() -> watch_controller.IsDead)
+        }
+
+        // A task that checks if the user presses the button fast enough and not too early.
+        let challenge killed = task {
+            let watch_controller = sys.SpawnRepeat(controlWatch reaction_watch)
+            let input = new InputChanges(player)
+            let score_updater =
+                sys.Spawn(this.UpdateScore 0.0 0.0 0.0)
+                |> Some
+                |> ref
+
+            while not(gameIsOver() || !killed) do
+                do! sys.WaitNextFrame()
+                input.Update()
                 // Has the player missed?
-                if watch.Elapsed.TotalSeconds > !grace_time then
+                if (!target_pos).IsSome && reaction_watch.Elapsed.TotalSeconds > !grace_time then
                     has_missed := true
-                else
-                    // Check if the player presses too early and update the matrix.
+                elif this.IsActive then
+                    // Check if the player presses too early.
                     match !target_pos with
                     | None ->
                         if input.IsButtonPress(Buttons.A) then
                             has_cheated := true
 
-                        // Decide if we make the target number appear in the matrix at some random position...
-                        if flipTarget() then
-                            let i, j = rnd.Next(3), rnd.Next(3)
-                            target_pos := Some (i, j)
-                            numbers.[i, j] <- !target
-                            watch.Reset()
-                            watch.Start()
-                        else
-                            // ... or flip some position in the matrix to a number that is not the target.
-                            distract()
                     | Some _ ->
                         // The target is visible and the player presses A:
                         // - Pick a new target
@@ -223,10 +247,9 @@ type GameplayScreen(sys : Environment, player) =
                             target_pos := None
                             target := nextTarget()
                             let old_score = !score
-                            score := !score + (!grace_time - watch.Elapsed.TotalSeconds) / !grace_time
+                            score := !score + (!grace_time - reaction_watch.Elapsed.TotalSeconds) / !grace_time
                             grace_time := 0.9 * !grace_time
-                            watch.Stop()
-                            watch.Reset()
+                            reaction_watch.Reset()
 
                             // Start rolling up the score.
                             match !score_updater with
@@ -241,11 +264,41 @@ type GameplayScreen(sys : Environment, player) =
                             // Spawn a new score rolling effect.
                             score_updater := sys.Spawn(this.UpdateScore old_score !score 1.0) |> Some
 
-                        // Flip on some position that does not contain the target number to some random non-target number.
-                        distract()
+            watch_controller.Kill()
+            return! sys.WaitUntil(fun() -> watch_controller.IsDead)
+        }
 
-            do! sys.Wait(swap_period)
-            input.Update()
+        // Start updating the matrix is watching the player's input
+        let matrixUpdater = sys.Spawn(updateMatrix)
+        let challenger = sys.Spawn(challenge)
+
+        // Start a task that opens a pause menu.
+        // When the pause menu is shown, a new screen is added, which causes
+        // this screen to stop being active.
+        // This is detected and handled in the matrix updater and the challenger.
+        let pause_controller =
+            sys.SpawnRepeat(
+                let input = new InputChanges(player)
+                task {
+                    input.Update()
+                    if this.IsActive && input.IsButtonPress(Buttons.Start) then
+                        let! resume_chosen = this.ShowPause
+                        if not resume_chosen then
+                            has_aborted := true
+                    return! sys.WaitNextFrame()
+                }
+            )
+
+        // Let all tasks we just spawned until the game is over.
+        do! sys.WaitUntil(gameIsOver)
+
+        // Kill all tasks. Not necessary, as they should exit of their own accord.
+        matrixUpdater.Kill()
+        challenger.Kill()
+        pause_controller.Kill()
+
+        // Wait for all tasks to die properly.
+        do! sys.WaitUntil(fun() -> matrixUpdater.IsDead && challenger.IsDead && pause_controller.IsDead)
 
         // Unless the player aborted, wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
@@ -257,15 +310,16 @@ type GameplayScreen(sys : Environment, player) =
                 >> this.DrawGameOver
                 >> this.DrawMatrix)
 
+            let input = new InputChanges(player)
             let input_updater =
                 sys.SpawnRepeat(task {
                     input.Update()
                     do! sys.WaitNextFrame()
                 })
         
-            do! sys.WaitUntil(fun () -> not (input.IsButtonPress(Buttons.A)))
+            do! sys.WaitUntil(fun () -> this.IsActive && not (input.IsButtonPress(Buttons.A)))
         
-            do! sys.WaitUntil(fun () -> input.IsStartPressed())
+            do! sys.WaitUntil(fun () -> this.IsActive && input.IsStartPressed())
         
             input_updater.Kill()
             do! sys.WaitUntil(fun () -> input_updater.IsDead)
