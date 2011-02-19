@@ -3,6 +3,7 @@
 // An extension of the Eventually computation expression as described in the F# spec.
 type Eventually<'R> =
     | Completed of 'R
+    | BlockedCond of (unit -> bool) * (unit -> Eventually<'R>)
     | Blocked of float32 * (unit -> Eventually<'R>)
     | BlockedNextFrame of (unit -> Eventually<'R>)
     | Running of (unit -> Eventually<'R>)
@@ -15,6 +16,8 @@ let rec bind k e =
         Running(fun () -> k r)
     | Running f ->
         Running(fun () -> f() |> bind k)
+    | BlockedCond(cond, f) ->
+        BlockedCond(cond, fun () -> f() |> bind k)
     | Blocked(dt, f) ->
         Blocked(dt, fun () -> f() |> bind k)
     | BlockedNextFrame f ->
@@ -40,6 +43,7 @@ let rec catch e handleExc last =
 
     match e with
     | Completed _ -> last(); e
+    | BlockedCond(cond, f) -> BlockedCond(cond, fun () -> newWork f)
     | Blocked(dt, f) -> Blocked(dt, fun () -> newWork f)
     | BlockedNextFrame f -> BlockedNextFrame(fun () -> newWork f)
     | Running f -> Running(fun() -> newWork f)
@@ -106,20 +110,12 @@ let internal nextTask () =
     Yield(fun() -> Completed())
 
 // Wait until a specified condition is true.
-// nextTask is always called, then the condition is checked.
-// If it's false, we wait until next frame, check the condition,
-// call nextTask if it's not true, and so on...
+// If the condition is initially true, no waiting occurs.
 let internal waitUntil f = task {
-    let stop = ref false
-    while not !stop do
-        do! nextTask()
-        if f() then
-            stop := true
-        else
-            do! nextFrame()
-            stop := f()
+    if not(f()) then
+        return! BlockedCond(f, fun() -> Completed())
 }
-
+    
 // Lock, can be used for mutual exclusion.
 // Locks should not be shared across instances of Scheduler.
 type Lock() =
@@ -187,6 +183,9 @@ type Scheduler() =
     // Tasks that are waiting until next frame (BlockedNextFrame).
     let blocked_next_frame = ResizeArray<unit -> Eventually<unit>>(4)
 
+    // Tasks that are waiting watching a condition
+    let watching = ResizeArray<(unit -> bool) * (unit -> Eventually<unit>)>(4)
+
     let ticks = ref 0L
 
     let exceptions = ref []
@@ -209,12 +208,14 @@ type Scheduler() =
         | Running f | Yield f -> CircularQueue.add ready f
         | Blocked(delay, f) -> insertWaitingTask(delay, f)
         | BlockedNextFrame f -> blocked_next_frame.Add(f)
+        | BlockedCond(cond, f) -> watching.Add(cond, f)
         | Completed _ -> ()
     
     member x.HasLiveTasks =
         waiting.count > 0
         || ready.len > 0
         || blocked_next_frame.Count > 0
+        || watching.Count > 0
 
     member x.GetTicks() = !ticks
 
@@ -223,9 +224,13 @@ type Scheduler() =
             let f = peekWaitingTask().f
             takeWaitingTask()
             CircularQueue.add ready f
+        
+        for (_, f) in watching do
+            CircularQueue.add ready f
+        watching.Clear()
             
 
-    // Run tasks for the current frame. dt is the frame time (typically 0.016666... on Xbox for 60 fps)
+    // Run tasks for the current frame. dt is the frame time (typically 0.016666... for 60 fps)
     member x.RunFor(dt) =
         let end_frame = !ticks + deltaToTicks dt
 
@@ -270,8 +275,20 @@ type Scheduler() =
                     executeReady()
                     executeWaiting()
         
+        // Move all tasks watching a condition that evaluates to true.
+        let executeWatching() =
+            let tmp = ResizeArray<_>(watching)
+            watching.Clear()
+            for (cond, f) in tmp do
+                if cond() then
+                    CircularQueue.add ready f
+                else
+                    watching.Add((cond, f))
+            executeReady()
+
         executeReady()
         executeWaiting()
+        executeWatching()
 
         for f in blocked_next_frame do
             CircularQueue.add ready f
@@ -406,7 +423,7 @@ type Environment(scheduler : Scheduler) =
 
     member this.WaitUntil cond = task {
         do! checkAndKill
-        do! waitUntil (fun () -> cond() || (!killing_data).IsSome)
+        do! waitUntil cond
         do! checkAndKill
     }
 
@@ -414,11 +431,8 @@ type Environment(scheduler : Scheduler) =
         do! checkAndKill
         let watch = new Stopwatch(scheduler)
         watch.Start()
-        do! nextTask()
+        do! waitUntil (fun() -> watch.ElapsedSeconds >= dt || cond())
         do! checkAndKill
-        while not (watch.ElapsedSeconds >= dt || cond()) do
-            do! nextFrame()
-            do! checkAndKill
     }
 
     member this.NewLock() = new Lock()
