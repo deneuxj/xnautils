@@ -184,7 +184,7 @@ type Scheduler() =
     let blocked_next_frame = ResizeArray<unit -> Eventually<unit>>(4)
 
     // Tasks that are waiting watching a condition
-    let watching = ResizeArray<(unit -> bool) * (unit -> Eventually<unit>)>(4)
+    let watching = ResizeArray<TupleStruct2<unit -> bool, unit -> Eventually<unit>>>(4)
 
     let ticks = ref 0L
 
@@ -208,7 +208,7 @@ type Scheduler() =
         | Running f | Yield f -> CircularQueue.add ready f
         | Blocked(delay, f) -> insertWaitingTask(delay, f)
         | BlockedNextFrame f -> blocked_next_frame.Add(f)
-        | BlockedCond(cond, f) -> watching.Add(cond, f)
+        | BlockedCond(cond, f) -> watching.Add(new TupleStruct2<_,_>(cond, f))
         | Completed _ -> ()
     
     member x.HasLiveTasks =
@@ -225,7 +225,8 @@ type Scheduler() =
             takeWaitingTask()
             CircularQueue.add ready f
         
-        for (_, f) in watching do
+        for cond_f in watching do
+            let f = cond_f.Item2
             CircularQueue.add ready f
         watching.Clear()
             
@@ -279,11 +280,11 @@ type Scheduler() =
         let executeWatching() =
             let tmp = ResizeArray<_>(watching)
             watching.Clear()
-            for (cond, f) in tmp do
-                if cond() then
-                    CircularQueue.add ready f
+            for cond_f in tmp do
+                if cond_f.Item1() then
+                    CircularQueue.add ready cond_f.Item2
                 else
-                    watching.Add((cond, f))
+                    watching.Add(cond_f)
             executeReady()
 
         executeReady()
