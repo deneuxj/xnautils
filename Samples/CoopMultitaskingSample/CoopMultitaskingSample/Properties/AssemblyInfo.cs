@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyTitle("CoopMultitaskingSample")]
 [assembly: AssemblyProduct("CoopMultitaskingSample")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyCopyright("Copyright © Microsoft 2011")]
+[assembly: AssemblyDescription("A code sample to demonstrate the use of cooperative multitasking and custom workflows to implement menus and game logic.")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyCopyright("Copyright © Johann Deneux 2011")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
