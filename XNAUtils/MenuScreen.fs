@@ -61,7 +61,8 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
         for i in 0..items.Length-1 do
             if fst items.[i] = entry then
                 visibility.[i] <- Hidden
-                must_move <- true
+                if i = !current then
+                    must_move <- true
         if must_move then
             moveDown()
 
