@@ -8,6 +8,7 @@ open System.Windows.Forms
 open System.Threading.Tasks
 open Microsoft.Xna.Framework
 
+open Dialogs
 
 type StorageDeviceNotConnectedException() =
     inherit Exception()
@@ -39,31 +40,55 @@ module StorageInternals =
     let checkConnected(dev : StorageDevice) =
         if not dev.drive.IsReady then raise(StorageDeviceNotConnectedException())
 
+    let gui_context = Threading.SynchronizationContext.Current
+
     let selectDevice _ =
-        use dialog = new FolderBrowserDialog()
-        let result = dialog.ShowDialog()
-        match result with
-        | DialogResult.Abort | DialogResult.Cancel | DialogResult.Ignore | DialogResult.No | DialogResult.None ->
-            null
-        | DialogResult.OK | DialogResult.Yes ->
-            if Directory.Exists(dialog.SelectedPath) then
-                let candidates =
-                    DriveInfo.GetDrives()
-                    |> Array.filter (fun di -> di.RootDirectory.Name = Path.GetPathRoot(dialog.SelectedPath))
-                if candidates.Length > 0 then
-                    new StorageDevice(candidates.[0], Path.GetDirectoryName(dialog.SelectedPath))
-                else
-                    null
-            else
-                null
-        | _ -> failwith "Unexpected dialog result"
+        let dialog = new FolderBrowser("Select device directory", None)
+        async {
+            try
+                do! Async.SwitchToContext(gui_context)
+                dialog.Show()
+                let! _ = Async.AwaitEvent(dialog.Closed)
+                return
+                    match dialog.Selected with
+                    | Some path ->
+                        if Directory.Exists(path) then
+                            let candidates =
+                                DriveInfo.GetDrives()
+                                |> Array.filter (fun di -> di.RootDirectory.Name = Path.GetPathRoot(path))
+                            if candidates.Length > 0 then
+                                new StorageDevice(candidates.[0], path)
+                            else
+                                null
+                        else
+                            null
+                    | None ->
+                        null
+            finally
+                dialog.Dispose()
+        }
+        |> Async.RunSynchronously
 
     let openContainer(dev : StorageDevice, name) _ =
-        use dialog = new FolderBrowserDialog()
-        let path = Path.Combine(dev.path, name)
-        if not(Directory.Exists(path)) then
-            Directory.CreateDirectory(path) |> ignore
-        new StorageContainer(name, dev)
+        let dialog = new FolderBrowser(sprintf "Select container directory [%s]" name, Some dev.path)
+        async {
+            try
+                do! Async.SwitchToContext(gui_context)
+                dialog.Show()
+                let! _ = Async.AwaitEvent(dialog.Closed)
+                return
+                    match dialog.Selected with
+                    | Some path ->
+                        if not(Directory.Exists(path)) then
+                            Directory.CreateDirectory(path) |> ignore
+                        new StorageContainer(name, dev)
+                    | None ->
+                        null
+            finally
+                dialog.Dispose()
+        }
+        |> Async.RunSynchronously
+
 
     let doThenMaybeCallback(task : Task<'T>, cb : AsyncCallback) =
         let context = Threading.SynchronizationContext.Current
