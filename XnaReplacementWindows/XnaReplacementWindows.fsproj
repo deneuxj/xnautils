@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Dialogs.fs" />
+    <Compile Include="GamerServices.fs" />
     <Compile Include="Storage.fs" />
     <None Include="Script.fsx" />
   </ItemGroup>

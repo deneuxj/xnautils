@@ -3,13 +3,18 @@
 open System.Windows.Forms
 open System.IO
 open System
+open System.Threading.Tasks
+
+// NOTE: Works only if module vars are initialized from the GUI thread, which seems to be the case.
+let gui_context = Threading.SynchronizationContext.Current
+let single_h = 32
 
 type FolderBrowser(title, root) as this =
     inherit Form(Text = title)
 
     do printfn "DBG: %A" root
 
-    let button_panel = new Panel(Dock = DockStyle.Bottom, Height = 32)
+    let button_panel = new Panel(Dock = DockStyle.Bottom, Height = single_h)
 
     let ok_btn = new Button(Text = "OK", Dock = DockStyle.Right)
     let cancel_btn = new Button(Text = "Cancel", Dock = DockStyle.Left)
@@ -59,3 +64,62 @@ type FolderBrowser(title, root) as this =
        ok_btn.Click.Add(fun _ -> this.Close())
 
     member this.Selected = getSelected()
+
+
+type MessageBox(title: string, text: string, button_texts : string seq, focus : int) as this =
+    inherit Form(Text = title)
+
+    let main_text = new TextBox(Multiline = true, ReadOnly = true, Dock = DockStyle.Fill)
+    do main_text.Lines <- text.Split([|'\n'|])
+    do this.Controls.Add(main_text)
+
+    let layout = new FlowLayoutPanel(FlowDirection = FlowDirection.LeftToRight, Dock = DockStyle.Bottom, Height = single_h)
+    do this.Controls.Add(layout)
+
+    let selected = ref None
+
+    let buttons =
+        button_texts
+        |> Seq.mapi (fun i txt ->
+            let button = new Button(Text = txt)
+            button.Click.Add(fun _ -> selected := Some i; this.Close())            
+            button
+            )
+        |> Array.ofSeq
+    do for btn in buttons do layout.Controls.Add(btn)
+
+    do this.AcceptButton <- buttons.[focus]
+
+    member this.Selected = !selected
+
+
+type SingleSignInDialog() as this =
+    inherit Form(Text = "Sign in")
+
+    let flow = new FlowLayoutPanel(FlowDirection = FlowDirection.LeftToRight, Dock = DockStyle.Fill, Height = single_h)
+
+    let label = new Label(Text = "Your gamertag: ")
+    let input = new TextBox()
+    do flow.Controls.AddRange [| label; input |]
+
+    let button_panel = new Panel(Dock = DockStyle.Bottom, Height = single_h)
+
+    let ok_btn = new Button(Text = "OK", Dock = DockStyle.Right)
+    let cancel_btn = new Button(Text = "Cancel", Dock = DockStyle.Left)
+    do button_panel.Controls.AddRange [|ok_btn; cancel_btn|]
+
+    do this.Controls.AddRange [| flow; button_panel |]
+
+
+let doThenMaybeCallback(task : Task<'T>, cb : AsyncCallback) =
+    let context = Threading.SynchronizationContext.Current
+
+    task.Start()
+
+    if cb <> null then
+        async {
+            Async.AwaitTask(task) |> ignore
+            do! Async.SwitchToContext(context)
+            cb.Invoke(task)
+        }
+        |> Async.Start

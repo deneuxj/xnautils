@@ -40,7 +40,6 @@ module StorageInternals =
     let checkConnected(dev : StorageDevice) =
         if not dev.drive.IsReady then raise(StorageDeviceNotConnectedException())
 
-    let gui_context = Threading.SynchronizationContext.Current
 
     let selectDevice _ =
         let dialog = new FolderBrowser("Select device directory", None)
@@ -90,20 +89,6 @@ module StorageInternals =
         |> Async.RunSynchronously
 
 
-    let doThenMaybeCallback(task : Task<'T>, cb : AsyncCallback) =
-        let context = Threading.SynchronizationContext.Current
-
-        task.Start()
-
-        if cb <> null then
-            async {
-                Async.AwaitTask(task) |> ignore
-                do! Async.SwitchToContext(context)
-                cb.Invoke(task)
-            }
-            |> Async.Start
-
-
 type StorageDevice with
     member this.FreeSpace : int64 =
         if this.drive.IsReady then
@@ -131,7 +116,7 @@ type StorageDevice with
     static member BeginShowSelector(cb : AsyncCallback, state : Object) =
         let f = new Task<_>(StorageInternals.selectDevice, state)
 
-        StorageInternals.doThenMaybeCallback(f, cb)
+        Dialogs.doThenMaybeCallback(f, cb)
 
         f :> IAsyncResult
 
@@ -146,7 +131,7 @@ type StorageDevice with
     member this.BeginOpenContainer(displayName : string, cb : AsyncCallback, state : Object) =
         let f = new Task<_>(StorageInternals.openContainer(this, displayName), state)
 
-        StorageInternals.doThenMaybeCallback(f, cb)
+        Dialogs.doThenMaybeCallback(f, cb)
 
         f :> IAsyncResult
 
