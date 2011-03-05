@@ -2,8 +2,6 @@
 
 open Microsoft.Xna.Framework
 
-#if XBOX
-
 type GamerServices.SignedInGamerCollection with
     member this.ItemOpt(i : int) =
         match this.[i] with
@@ -18,5 +16,3 @@ type GamerServices.SignedInGamerCollection with
 type GamerServices.Gamer with
     static member IsSignedIn(player : PlayerIndex) =
         GamerServices.Gamer.SignedInGamers.ItemOpt(player).IsSome
-
-#endif
