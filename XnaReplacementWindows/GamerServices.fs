@@ -13,7 +13,7 @@ module Internals =
 
     let signed_in_gamer : string option ref = ref None
 
-    let showMessageBox (title : string, text : string, buttons : string seq, focusButton : int) (_ : obj)=
+    let showMessageBox (title : string, text : string, buttons : string seq, focusButton : int) (_ : obj) =
         let msgBox = new Dialogs.MessageBox(title, text, buttons, focusButton)
         async {
             do! Async.SwitchToContext(Dialogs.gui_context)
@@ -26,6 +26,15 @@ module Internals =
         }
         |> Async.RunSynchronously
 
+    let showSignIn () =
+        let diag = new Dialogs.SingleSignInDialog()
+        async {
+            do! Async.SwitchToContext(Dialogs.gui_context)
+            let! _ = Async.AwaitEvent(diag.Closed)
+            lock signed_in_gamer (fun () ->
+                signed_in_gamer := diag.Gamertag)                
+        }
+        |> Async.StartImmediate
 
 type MessageBoxIcon =
     | Alert = 0
@@ -64,6 +73,7 @@ type GuideAlreadyVisibleException() =
 type Guide =
     class        
         static member IsVisible = !Internals.is_visible
+
         static member BeginShowMessageBox (player : PlayerIndex, title : string, text : string, buttons : string seq, focusButton : int, icon : MessageBoxIcon, cb, state : Object) =
             let f = new Task<_>(Internals.showMessageBox(title, text, buttons, focusButton), state)
 
@@ -82,4 +92,9 @@ type Guide =
             let task = result :?> Task<Nullable<int>>
             task.Wait()
             task.Result
+
+        static member ShowSignIn(paneCount: int, onlineOnly : bool) =
+            if paneCount <> 1 then
+                raise (NotImplementedException("paneCount must be 1"))
+            Internals.showSignIn()
     end

@@ -96,6 +96,8 @@ type MessageBox(title: string, text: string, button_texts : string seq, focus : 
 type SingleSignInDialog() as this =
     inherit Form(Text = "Sign in")
 
+    let gamertag : string option ref = ref None
+
     let flow = new FlowLayoutPanel(FlowDirection = FlowDirection.LeftToRight, Dock = DockStyle.Fill, Height = single_h)
 
     let label = new Label(Text = "Your gamertag: ")
@@ -105,10 +107,17 @@ type SingleSignInDialog() as this =
     let button_panel = new Panel(Dock = DockStyle.Bottom, Height = single_h)
 
     let ok_btn = new Button(Text = "OK", Dock = DockStyle.Right)
+    do ok_btn.Click.Add(fun _ -> gamertag := Some input.Text; this.Close())
+    do this.AcceptButton <- ok_btn
+
     let cancel_btn = new Button(Text = "Cancel", Dock = DockStyle.Left)
+    do cancel_btn.Click.Add(fun _ -> gamertag := None; this.Close())
+
     do button_panel.Controls.AddRange [|ok_btn; cancel_btn|]
 
     do this.Controls.AddRange [| flow; button_panel |]
+
+    member this.Gamertag = !gamertag
 
 
 let doThenMaybeCallback(task : Task<'T>, cb : AsyncCallback) =
