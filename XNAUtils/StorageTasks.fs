@@ -221,11 +221,7 @@ type Storage(use_player_storage) =
         if (!maybe_player).IsNone then invalidOp "No player assigned"
         let player = (!maybe_player).Value
 
-        // If the player isn't signed in, let him/her sign in now.
-        if Gamer.SignedInGamers.ItemOpt(player).IsNone then
-            do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
-
-        // If the player refused to sign in, reset player_device.
+        // If the player is no longer signed in, reset player_device.
         if Gamer.SignedInGamers.ItemOpt(player).IsNone then
             player_device := None
         else
