@@ -44,14 +44,26 @@ type MessageBoxIcon =
 
 
 [<AllowNullLiteral>]
+type GamerPrivileges() =
+    member this.AllowCommunication = false
+    member this.AllowOnlineSessions = false
+    member this.AllowPremiumContent = false
+    member this.AllowProfileViewing = false
+    member this.AllowPurchaseContent = false
+    member this.AllowTradeContent = false
+    member this.AllowUserCreatedContent = false
+
+
+[<AllowNullLiteral>]
 type Gamer(gamertag) =
     member this.Gamertag = gamertag
     static member SignedInGamers =
         new SignedInGamerCollection(
             match !Internals.signed_in_gamer with
             | None -> Array.create 4 null
-            | Some s -> [| new SignedInGamer(s); null; null; null |]
+            | Some s -> [| new SignedInGamer(s, PlayerIndex.One); null; null; null |]
         )
+
 and
     [<AllowNullLiteral>]
     SignedInGamerCollection(gamers : SignedInGamer[]) =
@@ -61,8 +73,12 @@ and
 
 and
     [<AllowNullLiteral>]
-    SignedInGamer(gamertag) =
-        inherit Gamer(gamertag)
+    SignedInGamer(gamertag, pi : PlayerIndex) =
+    inherit Gamer(gamertag)
+
+    member this.PlayerIndex = pi
+    member this.IsSignedInToLive = false
+    member this.Privileges = new GamerPrivileges()
 
 
 type GuideAlreadyVisibleException() =
@@ -73,6 +89,8 @@ type GuideAlreadyVisibleException() =
 type Guide =
     class        
         static member IsVisible = !Internals.is_visible
+
+        static member IsTrialMode = false
 
         static member BeginShowMessageBox (player : PlayerIndex, title : string, text : string, buttons : string seq, focusButton : int, icon : MessageBoxIcon, cb, state : Object) =
             let f = new Task<_>(Internals.showMessageBox(title, text, buttons, focusButton), state)
@@ -97,4 +115,7 @@ type Guide =
             if paneCount <> 1 then
                 raise (NotImplementedException("paneCount must be 1"))
             Internals.showSignIn()
+
+        static member ShowMarketplace(playerIndex : PlayerIndex) =
+            raise (new NotImplementedException())
     end
