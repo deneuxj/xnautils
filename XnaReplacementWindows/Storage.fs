@@ -71,27 +71,10 @@ module StorageInternals =
         |> Async.RunSynchronously
 
     let openContainer(dev : StorageDevice, name) _ =
-        let dialog = new FolderBrowser(sprintf "Select container directory [%s]" name, Some dev.path)
-        async {
-            try
-                do! Async.SwitchToContext(gui_context)
-                dialog.Show()
-                GamerServices.Internals.is_visible := true
-                let! _ = Async.AwaitEvent(dialog.Closed)
-                GamerServices.Internals.is_visible := false
-                return
-                    match dialog.Selected with
-                    | Some path ->
-                        if not(Directory.Exists(path)) then
-                            Directory.CreateDirectory(path) |> ignore
-                        new StorageContainer(name, dev)
-                    | None ->
-                        null
-            finally
-                dialog.Dispose()
-        }
-        |> Async.RunSynchronously
-
+        let path = Path.Combine(dev.path, name)
+        if not(Directory.Exists(path)) then
+            Directory.CreateDirectory(path) |> ignore
+        new StorageContainer(name, dev)
 
 type StorageDevice with
     member this.FreeSpace : int64 =
