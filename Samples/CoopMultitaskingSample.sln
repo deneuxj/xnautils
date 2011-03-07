@@ -9,8 +9,6 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Lib", "CoopMultitaskingSamp
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Xbox 360 Copy of XNAUtils", "..\XNAUtils\Xbox 360 Copy of XNAUtils.fsproj", "{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows Copy of CoopMultitaskingSample", "CoopMultitaskingSample\CoopMultitaskingSample\Windows Copy of CoopMultitaskingSample.csproj", "{50ECDB00-34D0-4505-B641-8A4B40320780}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -67,16 +65,6 @@ Global
 		{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}.Release|x86.Build.0 = Release|Xbox 360
 		{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}.Release|Xbox 360.ActiveCfg = Release|Xbox 360
 		{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}.Release|Xbox 360.Build.0 = Release|Xbox 360
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Debug|x86.ActiveCfg = Debug|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Debug|x86.Build.0 = Debug|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Debug|Xbox 360.ActiveCfg = Debug|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Release|Mixed Platforms.Build.0 = Release|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Release|x86.ActiveCfg = Release|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Release|x86.Build.0 = Release|x86
-		{50ECDB00-34D0-4505-B641-8A4B40320780}.Release|Xbox 360.ActiveCfg = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
