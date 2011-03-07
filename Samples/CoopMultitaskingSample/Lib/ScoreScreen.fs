@@ -1,4 +1,4 @@
-﻿module CoopMultiTaskingSample.ScoreScreen
+﻿namespace CoopMultiTaskingSample.ScoreScreen
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input

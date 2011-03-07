@@ -14,8 +14,9 @@ open XNAUtils.XNAExtensions
 open GameplayScreen
 open ResultScreen
 open MiscScreens
-open UserSettings
-open ScoreScreen
+open UserSettings.Module
+open CoopMultiTaskingSample.UserSettings
+open CoopMultiTaskingSample.ScoreScreen
 
 // The state of the top level, used to react to sign-out.
 type TopState =
