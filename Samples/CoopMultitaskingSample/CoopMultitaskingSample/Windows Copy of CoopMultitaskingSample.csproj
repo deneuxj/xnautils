@@ -96,6 +96,10 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\XnaReplacementWindows\XnaReplacementWindows.fsproj">
+      <Project>{C4ADE1CD-AFAC-4458-A0B9-72A3C621DF79}</Project>
+      <Name>XnaReplacementWindows</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\XNAUtils\XNAUtils.fsproj">
       <Project>{EBFAB7EB-FF0B-4DE3-842B-BAB06DCD3D42}</Project>
       <Name>XNAUtils</Name>
