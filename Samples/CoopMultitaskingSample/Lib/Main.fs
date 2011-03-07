@@ -303,6 +303,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             // Ask the player to sign in unless already signed in or there are no sign in requirement.
             if sign_in_req <> SignedInRequirement.Free && not(Gamer.IsSignedIn(controlling_player)) then
                 do! doOnGuide <| fun () -> Guide.ShowSignIn(1, false)
+                do! sys.WaitUntil(fun () -> Guide.IsVisible)
                 do! sys.WaitUntil(fun () -> not (Guide.IsVisible))
 
             // Proceed only if the user actually signed in unless signing in is not strictly required.
