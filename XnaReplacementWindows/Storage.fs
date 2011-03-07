@@ -47,7 +47,9 @@ module StorageInternals =
             try
                 do! Async.SwitchToContext(gui_context)
                 dialog.Show()
+                GamerServices.Internals.is_visible := true
                 let! _ = Async.AwaitEvent(dialog.Closed)
+                GamerServices.Internals.is_visible := false
                 return
                     match dialog.Selected with
                     | Some path ->
@@ -74,7 +76,9 @@ module StorageInternals =
             try
                 do! Async.SwitchToContext(gui_context)
                 dialog.Show()
+                GamerServices.Internals.is_visible := true
                 let! _ = Async.AwaitEvent(dialog.Closed)
+                GamerServices.Internals.is_visible := false
                 return
                     match dialog.Selected with
                     | Some path ->

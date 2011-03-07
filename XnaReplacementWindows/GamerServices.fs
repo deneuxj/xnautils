@@ -17,8 +17,10 @@ module Internals =
         let msgBox = new Dialogs.MessageBox(title, text, buttons, focusButton)
         async {
             do! Async.SwitchToContext(Dialogs.gui_context)
+            is_visible := true
             msgBox.Show()
             let! _ = Async.AwaitEvent(msgBox.Closed)
+            is_visible := false
             return
                 match msgBox.Selected with
                 | Some i -> Nullable(i)
@@ -30,7 +32,10 @@ module Internals =
         let diag = new Dialogs.SingleSignInDialog()
         async {
             do! Async.SwitchToContext(Dialogs.gui_context)
+            is_visible := true
+            diag.Show()
             let! _ = Async.AwaitEvent(diag.Closed)
+            is_visible := false
             lock signed_in_gamer (fun () ->
                 signed_in_gamer := diag.Gamertag)                
         }
