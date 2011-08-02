@@ -22,7 +22,8 @@ type PauseMenuAction =
     | Resume
 
 type GameplayScreen(sys : Environment, player) =
-    inherit ScreenBase<Resources>()
+    let impl = new ScreenBase<Resources>()
+    let impl_screen = impl :> Screen
 
     let rsc = ref None
 
@@ -89,7 +90,7 @@ type GameplayScreen(sys : Environment, player) =
 
         let rec loop() = task {
             // Show the menu screen and wait for the user to select an entry or cancel.
-            let! action = this.ScreenManager.AddDoRemove(menu, menu.Task)
+            let! action = impl.ScreenManager.AddDoRemove(menu, menu.Task)
 
             // Take the action corresponding to the selected entry, if any.
             // Cancelling the menu has the same effect as choosing "Resume".
@@ -98,7 +99,7 @@ type GameplayScreen(sys : Environment, player) =
                 // Create an instructions screen
                 use instructions = MiscScreens.mkInstructions(player, sys)
                 // Show it
-                do! this.ScreenManager.AddDoRemove(instructions, instructions.Task)
+                do! impl.ScreenManager.AddDoRemove(instructions, instructions.Task)
                 return! loop()
             | None | Some Resume ->
                 return true
@@ -119,17 +120,17 @@ type GameplayScreen(sys : Environment, player) =
         // Draw the score, the target and the matrix
         // Note that it's possible to embedd rendering code inside the update code,
         // which is used here for rendering the score.
-        this.SetDrawer(
+        impl.Drawer <-
             fun (rsc) ->
                 rsc.batch.DrawString(rsc.font, sprintf "%d" (int !score), Vector2(500.0f, 100.0f), Color.White)
                 rsc
             >> this.DrawTarget
-            >> this.DrawMatrix)
+            >> this.DrawMatrix
 
         while watch.Elapsed.TotalSeconds < duration && not !killed do
-            if not(this.IsActive) && watch.IsRunning then
+            if not(impl.IsActive) && watch.IsRunning then
                 watch.Stop()
-            elif this.IsActive && not(watch.IsRunning) then
+            elif impl.IsActive && not(watch.IsRunning) then
                 watch.Start()
             score := score_mult * (old_score + (new_score - old_score) * watch.Elapsed.TotalSeconds / duration)
             do! sys.WaitNextFrame()
@@ -166,22 +167,26 @@ type GameplayScreen(sys : Environment, player) =
         // True if the user selects "Abort" in the pause menu.
         let has_aborted = ref false
 
+        impl.PreDrawer <- this.PreDraw
+
         // Draw the score, the target and the matrix
         // Note that it's possible to embedd rendering code inside the update code,
         // which is used here for rendering the score.
-        this.SetDrawer(
+        impl.Drawer <-
             fun (rsc) ->
                 rsc.batch.DrawString(rsc.font, sprintf "%d" (int !score), Vector2(500.0f, 100.0f), Color.White)
                 rsc
             >> this.DrawTarget
-            >> this.DrawMatrix)
+            >> this.DrawMatrix
+
+        impl.PostDrawer <- this.PostDraw
 
         let gameIsOver() = (!has_missed || !has_cheated || !has_aborted)
 
         // A task that pauses and resumes a watch depending on whether the screen is active or not.
         // Meant to be spawned with SpawnRepeat.
         let controlWatch (watch : Stopwatch) = task {
-            match this.IsActive, watch.IsRunning with
+            match impl.IsActive, watch.IsRunning with
             | false, true -> watch.Stop()
             | true, false -> watch.Start()
             | false, false | true, true -> ()
@@ -231,7 +236,7 @@ type GameplayScreen(sys : Environment, player) =
                 // Has the player missed?
                 if (!target_pos).IsSome && reaction_watch.Elapsed.TotalSeconds > !grace_time then
                     has_missed := true
-                elif this.IsActive then
+                elif impl.IsActive then
                     // Check if the player presses too early.
                     match !target_pos with
                     | None ->
@@ -281,7 +286,7 @@ type GameplayScreen(sys : Environment, player) =
                 let input = new InputChanges(player)
                 task {
                     input.Update()
-                    if this.IsActive && input.IsButtonPress(Buttons.Start) then
+                    if impl.IsActive && input.IsButtonPress(Buttons.Start) then
                         let! resume_chosen = this.ShowPause
                         if not resume_chosen then
                             has_aborted := true
@@ -303,12 +308,12 @@ type GameplayScreen(sys : Environment, player) =
         // Unless the player aborted, wait until A is no longer pressed, then wait until Start or A is pressed.
         if not !has_aborted then
             // Draw "Game over" instead of the target
-            this.SetDrawer(
+            impl.Drawer <-
                 fun (rsc) ->
                     rsc.batch.DrawString(rsc.font, sprintf "%d" (int (!score * score_mult)), Vector2(500.0f, 100.0f), Color.White)
                     rsc            
                 >> this.DrawGameOver
-                >> this.DrawMatrix)
+                >> this.DrawMatrix
 
             let input = new InputChanges(player)
             let input_updater =
@@ -317,9 +322,9 @@ type GameplayScreen(sys : Environment, player) =
                     do! sys.WaitNextFrame()
                 })
         
-            do! sys.WaitUntil(fun () -> this.IsActive && not (input.IsButtonPress(Buttons.A)))
+            do! sys.WaitUntil(fun () -> impl.IsActive && not (input.IsButtonPress(Buttons.A)))
         
-            do! sys.WaitUntil(fun () -> this.IsActive && input.IsStartPressed())
+            do! sys.WaitUntil(fun () -> impl.IsActive && input.IsStartPressed())
         
             input_updater.Kill()
             do! sys.WaitUntil(fun () -> input_updater.IsDead)
@@ -330,24 +335,35 @@ type GameplayScreen(sys : Environment, player) =
             else TooLate(!grace_time, int (!score * score_mult))
     }
 
-    // Load a font and create a sprite batch. If a sprite batch was already created, dispose of it.        
-    override this.LoadContent() =
-        match !rsc with
-        | Some r -> r.batch.Dispose()
-        | None -> ()
+    interface Screen with
+        member this.ClearScreenManager() = impl_screen.ClearScreenManager()
+        member this.Draw() = impl_screen.Draw()
+        member this.SetGame(ng) = impl_screen.SetGame(ng)
+        member this.SetIsOnTop(b) = impl_screen.SetIsOnTop(b)
+        member this.SetScreenManager(sm) = impl_screen.SetScreenManager(sm)
 
-        let font : SpriteFont = base.Content.Load("ui/font")
-        rsc := Some
-                { batch = new SpriteBatch(base.Game.GraphicsDevice)
-                  font = font }
+        // Load a font and create a sprite batch. If a sprite batch was already created, dispose of it.        
+        member this.LoadContent() =
+            impl_screen.LoadContent()
+            match !rsc with
+            | Some r -> r.batch.Dispose()
+            | None -> ()
 
-    // Remove the reference to the content, which is detected by the drawing code and prevents
-    // ObjectDisposedException to be raised when content that's been unloaded is used.
-    override this.UnloadContent() =
-        rsc := None
+            let font : SpriteFont = impl.Content.Load("ui/font")
+            rsc := Some
+                    { batch = new SpriteBatch(impl.Game.GraphicsDevice)
+                      font = font }
+
+        // Remove the reference to the content, which is detected by the drawing code and prevents
+        // ObjectDisposedException to be raised when content that's been unloaded is used.
+        member this.UnloadContent() =
+            rsc := None
+
+    interface System.IDisposable with
+        member this.Dispose() = (impl :> System.IDisposable).Dispose()
 
     // Check if we have some content, in which case we prepare the sprite batch for rendering.
-    override this.BeginDrawer() =
+    member private this.PreDraw() =
         match !rsc with
         | Some r -> r.batch.Begin()
         | None -> ()
@@ -355,7 +371,7 @@ type GameplayScreen(sys : Environment, player) =
 
     // Finish rendering with the sprite batch. Note that this is not called if we detected we
     // don't have any content in BeginDrawer.
-    override this.EndDrawer(rsc) = rsc.batch.End()
+    member private this.PostDraw(rsc) = rsc.batch.End()
 
     // Draw the target number in the upper left corner.
     member private this.DrawTarget(rsc : Resources) =
