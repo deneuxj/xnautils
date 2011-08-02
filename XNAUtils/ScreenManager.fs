@@ -110,61 +110,69 @@ and ScreenManager(game, ui_content_provider : IUiContentProvider) =
 
     member this.UiContent = ui_content_provider
 
+
 // A screen implementation that provides its own content manager and access to the game object.
-[<AbstractClass>]
 type ScreenBase<'T> (relative_content_path) =
     let is_on_top = ref false
     let game : Game option ref = ref None
     let content : ContentManager option ref = ref None
     let screen_manager : ScreenManager option ref = ref None
+
+    // Called before the drawer. Expected to return some data or resource passed to the drawer.
+    // If it returns None, the drawer is not called.
+    let pre_drawer = ref (fun() -> None)
+    // The drawer, expected to issue draw commands.
     let drawer : ('T -> unit) ref = ref (fun _ -> ())
+    // Called after the drawer, to clean up resources allocated by pre_drawer, if any.
+    let post_drawer : ('T -> unit) ref = ref (fun _ -> ())
 
     new() = new ScreenBase<'T>("")
 
-    abstract member SetGame : Game -> unit
-    default this.SetGame(new_game) =
-        let g, c =
-            let mkContent() =
-                new ContentManager(
-                        new_game.Content.ServiceProvider,
-                        System.IO.Path.Combine(new_game.Content.RootDirectory, relative_content_path))
+    member this.PreDrawer
+        with get() = !pre_drawer
+        and set(d) = pre_drawer := d
 
-            match !game, !content with
-            | Some game, Some content ->
-                if System.Object.ReferenceEquals(game, new_game) then
-                    game, content
-                else
-                    content.Unload()
-                    new_game, mkContent()
-            | None, None ->
-                new_game, mkContent()
-            | _ -> failwith "Unreachable"
+    member this.Drawer
+        with get() = !drawer
+        and set(d) = drawer := d
 
-        game := Some g
-        content := Some c
-
-    member this.SetDrawer(d) = drawer := d
-
-    abstract member BeginDrawer : unit -> 'T option
-    default this.BeginDrawer() = None
-
-    abstract member EndDrawer : 'T -> unit
-    default this.EndDrawer(_) = ()
-
-    abstract member LoadContent : unit -> unit
-    
-    abstract member UnloadContent : unit -> unit    
+    member this.PostDrawer
+        with get() = !post_drawer
+        and set(d) = post_drawer := d
     
     interface Screen with
-        member this.SetGame(ng) = this.SetGame(ng)
+        member this.SetGame(new_game) =
+            let g, c =
+                let mkContent() =
+                    new ContentManager(
+                            new_game.Content.ServiceProvider,
+                            System.IO.Path.Combine(new_game.Content.RootDirectory, relative_content_path))
 
+                match !game, !content with
+                | Some game, Some content ->
+                    if System.Object.ReferenceEquals(game, new_game) then
+                        game, content
+                    else
+                        content.Unload()
+                        new_game, mkContent()
+                | None, None ->
+                    new_game, mkContent()
+                | _ -> failwith "Unreachable"
+
+            game := Some g
+            content := Some c
+
+        // Draw this screen.
+        // Check if the pre-drawer returns some value.
+        // If so, call the drawer, then finally the post-drawer.
+        // If this screen is not on top, draw a half-transparent black veil over it.
         member this.Draw() =
-            match this.BeginDrawer() with
+            match (!pre_drawer)() with
             | Some rsc ->
                 try
                     (!drawer)(rsc)
                 finally
-                    this.EndDrawer(rsc)
+                    (!post_drawer)(rsc)
             | None -> ()
 
             if not this.IsOnTop then
@@ -182,11 +190,9 @@ type ScreenBase<'T> (relative_content_path) =
                 | _ -> ()
 
 
-        member this.LoadContent() =
-            this.LoadContent()
+        member this.LoadContent() = ()
 
         member this.UnloadContent() =
-            this.UnloadContent()
             match !content with
             | Some content -> content.Unload()
             | None -> ()

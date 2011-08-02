@@ -9,20 +9,22 @@ open XNAUtils.ScreenManager
 open XNAUtils.XNAExtensions
 
 type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
-    inherit ScreenBase<unit>()
+    let impl = new ScreenBase<unit>()
+    let impl_screen = impl :> Screen
 
     let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f)
 
     let input = new InputChanges.InputChanges(player)
 
     member this.Task = task {
-        this.SetDrawer(this.Drawer)
+        impl.PreDrawer <- fun () -> Some()
+        impl.Drawer <- this.Drawer
 
         let animator = sys.Spawn(animation.Task)
 
         // Wait until the player presses a button.
         while
-            not (this.IsActive
+            not (impl.IsActive
                  && (input.IsBackPressed() || input.IsStartPressed())) do
             input.Update()
             do! sys.WaitNextFrame()
@@ -33,26 +35,31 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
         return ()
     }
 
-    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
-    // We return Some() so that this.Drawer below is called.
-    override this.BeginDrawer() = Some()
-
     member private this.Drawer() =
         try
             let color =
                 let k = animation.Fade
                 new Color(k, k, k, k)
 
-            this.SpriteBatch.Begin()
+            impl.SpriteBatch.Begin()
 
             lines
             |> Array.iteri(fun i txt ->
                 let y = placement.top + (float32 i) * placement.spacing
                 let pos = new Vector2(placement.left, y)
-                this.SpriteBatch.DrawString(this.Font1, txt, pos, color)
+                impl.SpriteBatch.DrawString(impl.Font1, txt, pos, color)
                 )
         finally
-            this.SpriteBatch.End()
+            impl.SpriteBatch.End()
 
-    override this.LoadContent() = ()
-    override this.UnloadContent() = ()
+    interface Screen with
+        member this.ClearScreenManager() = impl_screen.ClearScreenManager()
+        member this.Draw() = impl_screen.Draw()
+        member this.LoadContent() = impl_screen.LoadContent()
+        member this.SetGame(ng) = impl_screen.SetGame(ng)
+        member this.SetIsOnTop(b) = impl_screen.SetIsOnTop(b)
+        member this.SetScreenManager(sm) = impl_screen.SetScreenManager(sm)
+        member this.UnloadContent() = impl_screen.UnloadContent()
+
+    interface System.IDisposable with
+        member this.Dispose() = (impl :> System.IDisposable).Dispose()

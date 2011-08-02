@@ -23,7 +23,8 @@ type EntryVisibility =
     | Hidden
 
 type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, items : ('I * string)[], anim : AnimationParameters, placement : PlacementParameters) =
-    inherit ScreenBase<unit>()
+    let impl = new ScreenBase<unit>()
+    let impl_screen = impl :> Screen
 
     let current = ref 0
 
@@ -81,7 +82,8 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
             moveDown()
 
     member this.Task = task {
-        this.SetDrawer(this.Drawer)
+        impl.PreDrawer <- fun() -> Some()
+        impl.Drawer <- this.Drawer
 
         let animator = sys.Spawn(animation.Task)
 
@@ -94,7 +96,7 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
         while not (!selected || !backed) do
             // If this screen is not active, i.e. it is not on top or the guide is visible, wait.
             // We don't want to react to input that's not for us.
-            do! sys.WaitUntil(fun () -> this.IsActive)
+            do! sys.WaitUntil(fun () -> impl.IsActive)
 
             input.Update()
 
@@ -113,21 +115,26 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
             else None
     }
 
-    override this.LoadContent() = ()
-    override this.UnloadContent() = ()
+    interface Screen with
+        member this.ClearScreenManager() = impl_screen.ClearScreenManager()
+        member this.Draw() = impl_screen.Draw()
+        member this.LoadContent() = impl_screen.LoadContent()
+        member this.SetGame(ng) = impl_screen.SetGame(ng)
+        member this.SetIsOnTop(b) = impl_screen.SetIsOnTop(b)
+        member this.SetScreenManager(sm) = impl_screen.SetScreenManager(sm)
+        member this.UnloadContent() = impl_screen.UnloadContent()
 
-    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
-    // We return Some() so that this.Drawer below is called.
-    override this.BeginDrawer() = Some()
+    interface System.IDisposable with
+        member this.Dispose() = (impl :> System.IDisposable).Dispose()
 
     member private this.Drawer() =
         let visible_color = Color.Yellow
         let disabled_color = Color.Gray
         let selected_color = Color.Red
         
-        let right = 10.0f + float32 base.Game.GraphicsDevice.Viewport.Width
+        let right = 10.0f + float32 impl.Game.GraphicsDevice.Viewport.Width
         try
-            this.SpriteBatch.Begin()
+            impl.SpriteBatch.Begin()
             let rec work(i, y) =
                 if i < items.Length then
                     let dst = Vector2(placement.left, y)
@@ -152,7 +159,7 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
                     
                     match visibility.[i] with
                     | Hidden -> ()
-                    | _ -> this.SpriteBatch.DrawString(this.Font1, snd items.[i], pos, color)
+                    | _ -> impl.SpriteBatch.DrawString(impl.Font1, snd items.[i], pos, color)
 
                     work(i + 1, next_y)
                 else
@@ -161,4 +168,4 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
             work(0, placement.top)
 
         finally
-            this.SpriteBatch.End()
+            impl.SpriteBatch.End()

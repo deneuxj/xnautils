@@ -9,7 +9,8 @@ open XNAUtils.CoopMultiTasking
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 
 type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
-    inherit ScreenManager.ScreenBase<unit>()
+    let impl = new ScreenManager.ScreenBase<_>()
+    let impl_screen = impl :> ScreenManager.Screen
 
     let pos = ref Vector2.Zero
     let txt = "Press start"
@@ -18,7 +19,8 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
 
     // This task is chopped in blocks and each block is executed by the scheduler each frame (see Main.Update())
     member this.Task = task {
-        this.SetDrawer(this.Drawer)
+        impl.PreDrawer <- fun() -> Some()
+        impl.Drawer <- this.Drawer
 
         // subtask that makes the "press start" text blink. Executes concurrently
         let blinker =
@@ -27,7 +29,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
         // Task to check if a button is pressed. Sets player when that happens.
         let player : PlayerIndex option ref = ref None
         while (!player).IsNone do
-            do! sys.WaitUntil(fun () -> this.IsActive)
+            do! sys.WaitUntil(fun () -> impl.IsActive)
             for p in all_players do
                 let state = GamePad.GetState(p)
                 if state.IsConnected
@@ -56,23 +58,31 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
             | None -> failwith "Unreachable"
     }
 
+    interface ScreenManager.Screen with
+        member this.ClearScreenManager() = impl_screen.ClearScreenManager()
+        member this.Draw() = impl_screen.Draw()
+        member this.LoadContent() =
+            impl_screen.LoadContent()
 
-    override this.LoadContent() =
-        // Now is a good time to compute values which depend on the graphics device.
-        // Update the position where the text is drawn.
-        let sz = this.Font1.MeasureString(txt)
-        let area = base.Game.GraphicsDevice.Viewport.TitleSafeArea
+            // Now is a good time to compute values which depend on the graphics device.
+            // Update the position where the text is drawn.
+            let sz = impl.Font1.MeasureString(txt)
+            let area = impl.Game.GraphicsDevice.Viewport.TitleSafeArea
 
-        let x = area.Left + (area.Width - int sz.X) / 2
-        let y = area.Top + (area.Height - int sz.Y) / 2
+            let x = area.Left + (area.Width - int sz.X) / 2
+            let y = area.Top + (area.Height - int sz.Y) / 2
 
-        pos := new Vector2(float32 x, float32 y)
+            pos := new Vector2(float32 x, float32 y)
 
-    override this.UnloadContent() = ()
+        member this.SetGame(g) = impl_screen.SetGame(g)
+        member this.SetIsOnTop(b) = impl_screen.SetIsOnTop(b)
+        member this.SetScreenManager(sm) = impl_screen.SetScreenManager(sm)
+        member this.UnloadContent() = impl_screen.UnloadContent()
 
-    // The default implementation of BeginDrawer returns None, which prevents the drawer to be executed.
-    // We return Some() so that this.Drawer below is called.
-    override this.BeginDrawer() = Some()
+
+    interface System.IDisposable with
+        member this.Dispose() = (impl :> System.IDisposable).Dispose()
+
 
     // Draw "Press start" centered on the screen.
     member private this.Drawer() =
@@ -82,7 +92,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
             new Color(k, k, k, k)
 
         try
-            this.SpriteBatch.Begin()
-            this.SpriteBatch.DrawString(this.Font1, "Press start", !pos, color)                
+            impl.SpriteBatch.Begin()
+            impl.SpriteBatch.DrawString(impl.Font1, "Press start", !pos, color)                
         finally
-            this.SpriteBatch.End()
+            impl.SpriteBatch.End()
