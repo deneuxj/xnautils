@@ -11,3 +11,7 @@ glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSampl
 glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Debug.cachefile
 glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSample.csproj.Release.cachefile
 glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Release.cachefile
+syntax: regexp
+XnaReplacementWindows/bin/
+syntax: glob
+XnaReplacementWindows/obj/
