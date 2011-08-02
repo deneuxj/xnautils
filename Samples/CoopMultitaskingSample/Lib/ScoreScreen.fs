@@ -69,7 +69,16 @@ type ScoreScreen(sys : Environment, player : PlayerIndex, scores : Scores) =
     member this.Task = task {
         let input_updater = sys.SpawnRepeat(task { input.Update(); return! sys.WaitNextFrame() })
 
-        this.SetDrawer(this.DrawScores)
+        this.PreDrawer <-
+            fun() ->
+                match !rsc with
+                | Some rsc -> rsc.batch.Begin()
+                | None -> ()
+                !rsc
+
+        this.Drawer <- this.DrawScores
+
+        this.PostDrawer <- fun(rsc) -> rsc.batch.End()
 
         do! sys.WaitUntil(fun() -> this.IsActive && (input.IsStartPressed() || input.IsBackPressed()))
 
@@ -77,27 +86,20 @@ type ScoreScreen(sys : Environment, player : PlayerIndex, scores : Scores) =
         return! sys.WaitUntil(fun() -> input_updater.IsDead)
     }
 
-    override this.LoadContent() =
-        match !rsc with
-        | Some r -> r.batch.Dispose()
-        | None -> ()
+    interface Screen with
+        override this.LoadContent() =
+            match !rsc with
+            | Some r -> r.batch.Dispose()
+            | None -> ()
 
-        let font : SpriteFont = base.Content.Load("ui/font")
-        rsc := Some
-                { batch = new SpriteBatch(base.Game.GraphicsDevice)
-                  font = font }
+            let font : SpriteFont = base.Content.Load("ui/font")
+            rsc := Some
+                    { batch = new SpriteBatch(base.Game.GraphicsDevice)
+                      font = font }
 
-    override this.UnloadContent() =
-        rsc := None
-
-    override this.BeginDrawer() =
-        match !rsc with
-        | Some rsc -> rsc.batch.Begin()
-        | None -> ()
-        !rsc
-
-    override this.EndDrawer(rsc) =
-        rsc.batch.End()
+        override this.UnloadContent() =
+            rsc := None
+        
 
     member private this.DrawScores(rsc : Resources) =
         let startY = 400.0f

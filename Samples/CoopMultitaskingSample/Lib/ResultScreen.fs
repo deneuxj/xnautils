@@ -33,7 +33,16 @@ type ResultScreen(sys : Environment, player, reason) =
     }
 
     member this.Task = task {
-        this.SetDrawer(this.Drawer)
+        this.PreDrawer <-
+            fun() ->
+                match !rsc with
+                | Some rsc -> rsc.batch.Begin()
+                | None -> ()
+                !rsc
+
+        this.Drawer <- this.Draw
+
+        this.PostDrawer <- fun (rsc) -> rsc.batch.End()
 
         let blinker = sys.Spawn(blink.Task)
         
@@ -43,29 +52,22 @@ type ResultScreen(sys : Environment, player, reason) =
         do! sys.WaitUntil(fun () -> blinker.IsDead)
     }
 
-    override this.LoadContent() =
-        match !rsc with
-        | Some r -> r.batch.Dispose()
-        | None -> ()
+    interface Screen with
+        override this.LoadContent() =
+            match !rsc with
+            | Some r -> r.batch.Dispose()
+            | None -> ()
 
-        let font : SpriteFont = base.Content.Load("ui/font")
-        rsc := Some
-                { batch = new SpriteBatch(base.Game.GraphicsDevice)
-                  font = font }
+            let font : SpriteFont = base.Content.Load("ui/font")
+            rsc := Some
+                    { batch = new SpriteBatch(base.Game.GraphicsDevice)
+                      font = font }
 
-    override this.UnloadContent() =
-        rsc := None
+        override this.UnloadContent() =
+            rsc := None
+        
 
-    override this.BeginDrawer() =
-        match !rsc with
-        | Some rsc -> rsc.batch.Begin()
-        | None -> ()
-        !rsc
-
-    override this.EndDrawer(rsc) =
-        rsc.batch.End()
-
-    member private this.Drawer(rsc) =
+    member private this.Draw(rsc) =
         let k = blink.Fade * if blink.Oscillation >= 0.0f then 1.0f else 0.0f
         let color = Color(k, k, k, k)
         let reason_txt =
