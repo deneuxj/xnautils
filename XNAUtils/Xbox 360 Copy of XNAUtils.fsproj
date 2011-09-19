@@ -40,6 +40,7 @@
     <Compile Include="ArrayInlined.fs" />
     <Compile Include="TextIcons.fs" />
     <Compile Include="CircularQueue.fs" />
+    <Compile Include="ParallelUpdateDrawGameComponent.fs" />
     <Compile Include="StorageComponent.fs" />
     <Compile Include="StorageComponentGamerServices.fs" />
     <Compile Include="AssemblyInfo.fs" />
