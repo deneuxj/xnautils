@@ -10,7 +10,7 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, updat
     let impl = new GameComponent(game)
 
     let mutable state = initial_state
-    let mutable gt_shared = new GameTime()
+    let mutable gt_shared = GameTime()
 
     let mutable enabled = true
     let mutable update_order = 0
@@ -41,7 +41,7 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, updat
             signal_done.WaitOne() |> ignore
 
     interface IGameComponent with
-        member x.Initialize() = ()
+        member x.Initialize() = impl.Initialize()
 
     interface IUpdateable with
         member x.Enabled = impl.Enabled
