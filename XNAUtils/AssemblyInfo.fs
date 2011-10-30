@@ -1,7 +1,7 @@
 ﻿module XNAUtils.AssemblyInfo
 
 (*
-Copyright [2010] [Johann Deneux]
+Copyright [2010, 2011] [Johann Deneux]
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ open System.Runtime.InteropServices
 [<assembly: AssemblyProduct("XNAUtils")>]
 [<assembly: AssemblyDescription("Utility library for XNA games")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyCopyright("Copyright © Johann Deneux <johann.deneux@gmail.com> 2010")>]
+[<assembly: AssemblyCopyright("Copyright © Johann Deneux <johann.deneux@gmail.com> 2010, 2011")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
 [<assembly: ComVisible(false)>]
