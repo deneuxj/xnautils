@@ -52,13 +52,13 @@
   <ItemGroup>
     <Compile Include="SeqUtil.fs" />
     <Compile Include="TupleStruct.fs" />
+    <Compile Include="Hermite.fs" />
     <Compile Include="XNAExtensions.fs" />
     <Compile Include="ArrayInlined.fs" />
     <Compile Include="TextIcons.fs" />
     <Compile Include="CircularQueue.fs" />
     <Compile Include="ParallelUpdateDrawGameComponent.fs" />
     <Compile Include="StorageComponent.fs" />
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="JobQueueProcessor.fs" />
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
@@ -72,6 +72,7 @@
     <Compile Include="TextScreen.fs" />
     <Compile Include="StorageTasks.fs" />
     <None Include="CoopMultiTasking.fsx" />
+    <Compile Include="AssemblyInfo.fs" />
     <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
