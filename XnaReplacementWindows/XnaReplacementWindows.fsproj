@@ -8,7 +8,7 @@
     <ProjectGuid>{c4ade1cd-afac-4458-a0b9-72a3c621df79}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>XnaReplacementWindows</RootNamespace>
-    <AssemblyName>XnaReplacementWindows</AssemblyName>
+    <AssemblyName>CleverRake.XnaUtils.XnaReplacementWindows</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <Name>XnaReplacementWindows</Name>
   </PropertyGroup>

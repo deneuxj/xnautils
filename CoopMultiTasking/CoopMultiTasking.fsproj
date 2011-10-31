@@ -8,7 +8,7 @@
     <ProjectGuid>{7bde5138-ff45-40c3-ad86-7c614b7ad779}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>CoopMultiTasking</RootNamespace>
-    <AssemblyName>CoopMultiTasking</AssemblyName>
+    <AssemblyName>CleverRake.XnaUtils.CoopMultiTasking</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <Name>CoopMultiTasking</Name>
   </PropertyGroup>
