@@ -4,10 +4,12 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.InputChanges
-open XNAUtils.XNAExtensions
+open CleverRake.XnaUtils
+open CleverRake.XnaUtils.Application
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+open CleverRake.XnaUtils.XnaExtensions
 
 type Resources =
     { font : SpriteFont
@@ -23,7 +25,7 @@ type ResultScreen(sys : Environment, player, reason) =
 
     let rsc = ref None
     let input = new InputChanges(player)
-    let blink = new XNAUtils.Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.5f, 0.1f)
+    let blink = new Animations.FadeInOscillateFadeOut(sys, 0.1f, 0.5f, 0.1f)
 
     member private this.Wait() = task {
         input.Update()

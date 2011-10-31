@@ -4,10 +4,12 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.InputChanges
-open XNAUtils.XNAExtensions
+open CleverRake.XnaUtils
+open CleverRake.XnaUtils.Application
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+open CleverRake.XnaUtils.XnaExtensions
 
 type Resources =
     { font : SpriteFont

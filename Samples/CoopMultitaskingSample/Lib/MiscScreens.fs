@@ -4,10 +4,7 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.TextScreen
-open XNAUtils.MenuScreen
+open CleverRake.XnaUtils.Application
 
 let user_container = "User data"
 let user_settings_filename = "user_prefs.xml"

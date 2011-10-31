@@ -2,10 +2,13 @@
 
 open Microsoft.Xna.Framework
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.MenuScreen
-open XNAUtils.StorageTasks
+open CleverRake.XnaUtils
+open CleverRake.XnaUtils.Application
+open CleverRake.XnaUtils.StorageTasks
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+open CleverRake.XnaUtils.XnaExtensions
 
 type FontSize =
     | Small = 0

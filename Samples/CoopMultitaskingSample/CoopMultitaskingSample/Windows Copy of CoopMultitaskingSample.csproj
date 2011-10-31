@@ -96,6 +96,10 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\CoopMultiTasking\CoopMultiTasking.fsproj">
+      <Project>{7BDE5138-FF45-40C3-AD86-7C614B7AD779}</Project>
+      <Name>CoopMultiTasking</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\XnaReplacementWindows\XnaReplacementWindows.fsproj">
       <Project>{C4ADE1CD-AFAC-4458-A0B9-72A3C621DF79}</Project>
       <Name>XnaReplacementWindows</Name>

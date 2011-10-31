@@ -11,6 +11,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "XnaReplacementWindows", "..
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LibWinPC", "CoopMultitaskingSample\Lib\LibWinPC.fsproj", "{B9112F44-BB4D-4434-82D6-1E3854A2AE02}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Core", "..\Core\Core.fsproj", "{CBFF8E99-B91A-4ADC-A0AD-502616413116}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CoopMultiTasking", "..\CoopMultiTasking\CoopMultiTasking.fsproj", "{7BDE5138-FF45-40C3-AD86-7C614B7AD779}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -81,6 +85,30 @@ Global
 		{B9112F44-BB4D-4434-82D6-1E3854A2AE02}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B9112F44-BB4D-4434-82D6-1E3854A2AE02}.Release|x86.ActiveCfg = Release|Any CPU
 		{B9112F44-BB4D-4434-82D6-1E3854A2AE02}.Release|Xbox 360.ActiveCfg = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Debug|Xbox 360.ActiveCfg = Debug|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|x86.ActiveCfg = Release|Any CPU
+		{CBFF8E99-B91A-4ADC-A0AD-502616413116}.Release|Xbox 360.ActiveCfg = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Debug|Xbox 360.ActiveCfg = Debug|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|x86.ActiveCfg = Release|Any CPU
+		{7BDE5138-FF45-40C3-AD86-7C614B7AD779}.Release|Xbox 360.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

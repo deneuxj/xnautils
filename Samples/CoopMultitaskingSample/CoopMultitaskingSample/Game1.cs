@@ -13,7 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 
-using XNAUtils;
+using CleverRake.XnaUtils.Application;
 using System.Diagnostics;
 
 namespace CoopMultiTaskingSample
@@ -21,7 +21,7 @@ namespace CoopMultiTaskingSample
   /// <summary>
   /// This is the main type for your game
   /// </summary>
-  public class Game1 : Microsoft.Xna.Framework.Game, ScreenManager.IUiContentProvider, UserSettings.ISettingsNotifiable
+  public class Game1 : Microsoft.Xna.Framework.Game, IUiContentProvider, UserSettings.ISettingsNotifiable
   {
     GraphicsDeviceManager graphics;
     SpriteBatch spriteBatch;
@@ -31,7 +31,7 @@ namespace CoopMultiTaskingSample
     SpriteFont bigFont;
     Texture2D blankTexture;
 
-    ScreenManager.ScreenManager screenManager;
+    ScreenManager screenManager;
     Main.Main<Game1> mainComponent;
     GamerServicesComponent gamerServices;
     
@@ -57,7 +57,7 @@ namespace CoopMultiTaskingSample
     protected override void Initialize()
     {
       // TODO: Add your initialization logic here
-      screenManager = new ScreenManager.ScreenManager(this, (ScreenManager.IUiContentProvider)this);
+      screenManager = new ScreenManager(this, (IUiContentProvider)this);
       mainComponent = new Main.Main<Game1>(this, screenManager, Main.SignedInRequirement.MustSignIn);
       base.Components.Add(screenManager);
       base.Components.Add(mainComponent);
@@ -135,22 +135,22 @@ namespace CoopMultiTaskingSample
       base.Draw(gameTime);
     }
 
-    SpriteFont ScreenManager.IUiContentProvider.Font1
+    SpriteFont IUiContentProvider.Font1
     {
       get { return font; }
     }
 
-    SpriteFont ScreenManager.IUiContentProvider.Font2
+    SpriteFont IUiContentProvider.Font2
     {
       get { return font; }
     }
 
-    Texture2D ScreenManager.IUiContentProvider.Blank
+    Texture2D IUiContentProvider.Blank
     {
       get { return blankTexture; }
     }
 
-    SpriteBatch ScreenManager.IUiContentProvider.SpriteBatch
+    SpriteBatch IUiContentProvider.SpriteBatch
     {
       get { return spriteBatch; }
     }

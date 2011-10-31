@@ -3,13 +3,13 @@ module CoopMultiTaskingSample.Main
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.GamerServices
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.PressStartScreen
-open XNAUtils.MenuScreen
-open XNAUtils.TextScreen
-open XNAUtils.StorageTasks
-open XNAUtils.XNAExtensions
+open CleverRake.XnaUtils
+open CleverRake.XnaUtils.Application
+open CleverRake.XnaUtils.StorageTasks
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+open CleverRake.XnaUtils.XnaExtensions
 
 open GameplayScreen
 open ResultScreen
@@ -296,7 +296,7 @@ type Main<'G  when 'G :> Game and 'G :> ISettingsNotifiable>(game : 'G, screen_m
             (!settings).Apply(game)
 
             // Create the "press start" screen.
-            use press_start = new PressStartScreen(sys, 0.5f, 0.1f, 0.5f)
+            use press_start = new PressStartScreen.PressStartScreen(sys, 0.5f, 0.1f, 0.5f)
 
             // Show it.
             let! controlling_player = screen_manager.AddDoRemove(press_start, press_start.Task)
