@@ -5,13 +5,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{ebfab7eb-ff0b-4de3-842b-bab06dcd3d42}</ProjectGuid>
+    <ProjectGuid>{7bde5138-ff45-40c3-ad86-7c614b7ad779}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>XNAUtils</RootNamespace>
-    <AssemblyName>CleverRake.XnaUtils</AssemblyName>
+    <RootNamespace>CoopMultiTasking</RootNamespace>
+    <AssemblyName>CoopMultiTasking</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Name>XNAUtils</Name>
-    <TargetFrameworkProfile />
+    <Name>CoopMultiTasking</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,6 +20,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\Debug\CoopMultiTasking.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,51 +29,51 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
+    <DocumentationFile>bin\Release\CoopMultiTasking.XML</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <Tailcalls>false</Tailcalls>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <WarningLevel>3</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <WarningLevel>3</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
-    <Compile Include="Hermite.fs" />
-    <Compile Include="TextIcons.fs" />
-    <Compile Include="XNAExtensions.fs" />
-    <Compile Include="ParallelUpdateDrawGameComponent.fs" />
-    <Compile Include="Rumble.fs" />
-    <Compile Include="Octree.fs" />
-    <Compile Include="InputChanges.fs" />
-    <Compile Include="AssemblyInfo.fs" />
     <None Include="Script.fsx" />
+    <Compile Include="..\XNAUtils\CoopMultiTasking.fs">
+      <Link>CoopMultiTasking.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\Animations.fs">
+      <Link>Animations.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\ScreenManager.fs">
+      <Link>ScreenManager.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\MenuScreen.fs">
+      <Link>MenuScreen.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\TextScreen.fs">
+      <Link>TextScreen.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\PressStartScreen.fs">
+      <Link>PressStartScreen.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\StorageComponent.fs">
+      <Link>StorageComponent.fs</Link>
+    </Compile>
+    <Compile Include="..\XNAUtils\StorageTasks.fs">
+      <Link>StorageTasks.fs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">
-      <HintPath>..\..\..\..\..\..\..\..\..\Program Files\Microsoft XNA\XNA Game Studio\v3.1\References\Windows\x86\Microsoft.Xna.Framework.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Xna.Framework.Game">
-      <HintPath>..\..\..\..\..\..\..\..\..\Program Files\Microsoft XNA\XNA Game Studio\v3.1\References\Windows\x86\Microsoft.Xna.Framework.Game.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Game.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553" />
+    <Reference Include="Microsoft.Xna.Framework.Graphics">
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Graphics.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
     <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -87,9 +87,12 @@
       <Project>{c4ade1cd-afac-4458-a0b9-72a3c621df79}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <ProjectReference Include="..\XNAUtils\XNAUtils.fsproj">
+      <Name>XNAUtils</Name>
+      <Project>{ebfab7eb-ff0b-4de3-842b-bab06dcd3d42}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="Exists('$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	     Other similar extension points exist, see Microsoft.Common.targets.
 	<Target Name="BeforeBuild">
