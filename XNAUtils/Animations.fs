@@ -1,7 +1,6 @@
 ﻿namespace CleverRake.XnaUtils.CoopMultiTasking.Animations
 
-open CleverRake.XnaUtils.CoopMultiTasking.Core
-open CleverRake.XnaUtils.CoopMultiTasking.Sys
+open CleverRake.XnaUtils.CoopMultiTasking
 
 open Microsoft.Xna.Framework
 

@@ -6,11 +6,7 @@ open Microsoft.Xna.Framework.Graphics
 
 open CleverRake.XnaUtils
 open CleverRake.XnaUtils.CoopMultiTasking
-open CleverRake.XnaUtils.CoopMultiTasking.Core
-open CleverRake.XnaUtils.CoopMultiTasking.Sys
-
 open CleverRake.XnaUtils.XnaExtensions
-
 open CleverRake.XnaUtils.Application
 
 type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : PlacementParameters) =

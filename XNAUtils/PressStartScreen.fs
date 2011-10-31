@@ -6,9 +6,6 @@ open Microsoft.Xna.Framework.Graphics
 
 open CleverRake.XnaUtils
 open CleverRake.XnaUtils.CoopMultiTasking
-open CleverRake.XnaUtils.CoopMultiTasking.Core
-open CleverRake.XnaUtils.CoopMultiTasking.Sys
-
 open CleverRake.XnaUtils.Application
 
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]

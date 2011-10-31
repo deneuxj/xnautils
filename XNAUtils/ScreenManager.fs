@@ -6,9 +6,7 @@ open Microsoft.Xna.Framework.Graphics
 
 open System.Collections.Generic
 
-open CleverRake.XnaUtils.CoopMultiTasking.Core
-open CleverRake.XnaUtils.CoopMultiTasking.Sys
-
+open CleverRake.XnaUtils.CoopMultiTasking
 
 // Interface of screens as exposed to the ScreenManager
 type Screen =

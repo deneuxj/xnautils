@@ -7,10 +7,8 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Storage
 open Microsoft.Xna.Framework.GamerServices
 
-open CleverRake.XnaUtils.CoopMultiTasking.Core
-open CleverRake.XnaUtils.CoopMultiTasking.Sys
-
-open XnaExtensions
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.XnaExtensions
 
 let rec doOnGuide f = task {
     do! waitUntil(fun() -> not Guide.IsVisible)

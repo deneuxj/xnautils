@@ -1,5 +1,6 @@
 ﻿namespace CleverRake.XnaUtils.CoopMultiTasking
 
+[<AutoOpen>]
 module Core =
     // An extension of the Eventually computation expression as described in the F# spec.
     type Eventually<'R> =
@@ -117,6 +118,7 @@ module Core =
             return! BlockedCond(f, fun() -> Completed())
     }
 
+[<AutoOpen>]
 module Sys =
     open Core
     open CleverRake.XnaUtils
