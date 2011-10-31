@@ -1,4 +1,4 @@
-﻿module XNAUtils.TextIcons
+﻿module CleverRake.XnaUtils.TextIcons
 
 (*
 Copyright [2010] [Johann Deneux]

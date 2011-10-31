@@ -1,4 +1,4 @@
-﻿module XNAUtils.CircularQueue
+﻿module CleverRake.XnaUtils.CircularQueue
 
 (*
 Copyright [2010] [Johann Deneux]

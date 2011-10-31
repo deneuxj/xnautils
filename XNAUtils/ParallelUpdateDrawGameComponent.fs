@@ -1,4 +1,4 @@
-﻿namespace XNAUtils
+﻿namespace CleverRake.XnaUtils
 
 open Microsoft.Xna.Framework
 open System.Threading

@@ -1,4 +1,4 @@
-﻿module XNAUtils.Rumble
+﻿module CleverRake.XnaUtils.Rumble
 
 (*
 Copyright [2010] [Johann Deneux]

@@ -1,10 +1,10 @@
-﻿module XNAUtils.PressStartScreen
+﻿module CleverRake.XnaUtils.PressStartScreen
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
-open XNAUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking
 
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 

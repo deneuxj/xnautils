@@ -1,4 +1,4 @@
-﻿module XNAUtils.Octree
+﻿module CleverRake.XnaUtils.Octree
 
 (*
 Copyright (C) 2010 Johann Deneux

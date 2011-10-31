@@ -14,7 +14,7 @@ Copyright (C) 2010 Johann Deneux
    limitations under the License.
 *)
 
-module XNAUtils.ArrayInlined
+module CleverRake.XnaUtils.ArrayInlined
 
 // Early exit: No.
 // Array bounds check removed: Yes

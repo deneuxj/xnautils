@@ -1,4 +1,4 @@
-﻿module XNAUtils.InputChanges
+﻿module CleverRake.XnaUtils.InputChanges
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input

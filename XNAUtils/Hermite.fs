@@ -1,4 +1,4 @@
-﻿module XNAUtils.Hermite
+﻿module CleverRake.XnaUtils.Hermite
 
 (*
 Copyright [2010, 2011] [Johann Deneux]

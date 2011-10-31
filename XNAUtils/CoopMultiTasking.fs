@@ -1,4 +1,4 @@
-﻿module XNAUtils.CoopMultiTasking
+﻿module CleverRake.XnaUtils.CoopMultiTasking
 
 // An extension of the Eventually computation expression as described in the F# spec.
 type Eventually<'R> =

@@ -1,4 +1,4 @@
-﻿module XNAUtils.AssemblyInfo
+﻿module CleverRake.XnaUtils.AssemblyInfo
 
 (*
 Copyright [2010, 2011] [Johann Deneux]
@@ -20,8 +20,8 @@ open System.Reflection
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 
-[<assembly: AssemblyTitle("XNAUtils")>]
-[<assembly: AssemblyProduct("XNAUtils")>]
+[<assembly: AssemblyTitle("CleverRake.XnaUtils")>]
+[<assembly: AssemblyProduct("CleverRake.XnaUtils")>]
 [<assembly: AssemblyDescription("Utility library for XNA games")>]
 [<assembly: AssemblyCompany("")>]
 [<assembly: AssemblyCopyright("Copyright © Johann Deneux <johann.deneux@gmail.com> 2010, 2011")>]

@@ -1,4 +1,4 @@
-﻿module XNAUtils.StorageComponent
+﻿module CleverRake.XnaUtils.StorageComponent
 
 (*
 Copyright [2010] [Johann Deneux]

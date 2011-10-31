@@ -1,6 +1,6 @@
-﻿module XNAUtils.Animations
+﻿module CleverRake.XnaUtils.Animations
 
-open XNAUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking
 open Microsoft.Xna.Framework
 
 type FadeInOscillateFadeOut(sys : Environment, fade_in, period, fade_out) =

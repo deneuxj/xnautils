@@ -1,4 +1,4 @@
-﻿namespace XNAUtils
+﻿namespace CleverRake.XnaUtils
 
 type TupleStruct2<'T1, 'T2> =
     struct

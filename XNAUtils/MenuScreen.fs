@@ -1,12 +1,12 @@
-﻿module XNAUtils.MenuScreen
+﻿module CleverRake.XnaUtils.MenuScreen
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
-open XNAUtils.CoopMultiTasking
-open XNAUtils.ScreenManager
-open XNAUtils.XNAExtensions
+open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.ScreenManager
+open CleverRake.XnaUtils.XnaExtensions
 
 type AnimationParameters =
     {  period : float32

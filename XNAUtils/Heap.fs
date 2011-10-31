@@ -1,4 +1,4 @@
-﻿module XNAUtils.Heap
+﻿module CleverRake.XnaUtils.Heap
 
 (*
 Copyright (C) 2010 Johann Deneux

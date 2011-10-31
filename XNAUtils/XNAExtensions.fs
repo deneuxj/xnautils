@@ -1,4 +1,4 @@
-﻿module XNAUtils.XNAExtensions
+﻿module CleverRake.XnaUtils.XnaExtensions
 
 open Microsoft.Xna.Framework
 

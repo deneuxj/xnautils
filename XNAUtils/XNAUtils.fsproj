@@ -8,7 +8,7 @@
     <ProjectGuid>{ebfab7eb-ff0b-4de3-842b-bab06dcd3d42}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>XNAUtils</RootNamespace>
-    <AssemblyName>XNAUtils</AssemblyName>
+    <AssemblyName>CleverRake.XnaUtils</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <Name>XNAUtils</Name>
     <TargetFrameworkProfile />
@@ -71,7 +71,6 @@
     <Compile Include="MenuScreen.fs" />
     <Compile Include="TextScreen.fs" />
     <Compile Include="StorageTasks.fs" />
-    <None Include="CoopMultiTasking.fsx" />
     <Compile Include="AssemblyInfo.fs" />
     <None Include="Script.fsx" />
   </ItemGroup>

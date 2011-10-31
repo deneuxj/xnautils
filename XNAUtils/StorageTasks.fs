@@ -1,4 +1,4 @@
-﻿module XNAUtils.StorageTasks
+﻿module CleverRake.XnaUtils.StorageTasks
 
 open System
 open System.Xml.Serialization
@@ -8,7 +8,7 @@ open Microsoft.Xna.Framework.Storage
 open Microsoft.Xna.Framework.GamerServices
 
 open CoopMultiTasking
-open XNAExtensions
+open XnaExtensions
 
 let rec doOnGuide f = task {
     do! waitUntil(fun() -> not Guide.IsVisible)

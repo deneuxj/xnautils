@@ -1,4 +1,4 @@
-﻿module XNAUtils.ScreenManager
+﻿module CleverRake.XnaUtils.ScreenManager
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Content
@@ -6,7 +6,7 @@ open Microsoft.Xna.Framework.Graphics
 
 open System.Collections.Generic
 
-open XNAUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking
 
 // Interface of screens as exposed to the ScreenManager
 type Screen =
@@ -20,7 +20,7 @@ type Screen =
         abstract member ClearScreenManager : unit -> unit
     end
 
-// Most of the screens in XNAUtils need a couple of fonts and a sprite batch to draw themselves.
+// Most of the screens in XnaUtils need a couple of fonts and a sprite batch to draw themselves.
 and IUiContentProvider =
     interface
         abstract member Font1 : SpriteFont with get

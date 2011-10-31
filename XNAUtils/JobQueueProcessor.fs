@@ -1,6 +1,6 @@
-﻿module XNAUtils.JobQueueProcessor
+﻿module CleverRake.XnaUtils.JobQueueProcessor
 open System.Threading
-open XNAUtils.CircularQueue
+open CleverRake.XnaUtils.CircularQueue
 
 (*
 Copyright [2010] [Johann Deneux]
