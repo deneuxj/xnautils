@@ -19,7 +19,7 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
     let animation = new Animations.FadeInOscillateFadeOut(sys, 0.5f, 0.1f, 0.5f)
 
-    let input = new InputChanges.InputChanges(player)
+    let input = new InputChanges(player)
 
     member this.Task = task {
         impl.PreDrawer <- fun () -> Some()

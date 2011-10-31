@@ -35,7 +35,7 @@ type MenuScreen<'I when 'I : equality>(player : PlayerIndex, sys : Environment, 
 
     let animation = new Animations.MultipleFadeIn(sys, items.Length, anim.period, anim.shift)
 
-    let input = new InputChanges.InputChanges(player)
+    let input = new InputChanges(player)
 
     let visibility = items |> Array.map (fun _ -> Visible)
 
