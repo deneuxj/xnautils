@@ -1,4 +1,4 @@
-﻿module CleverRake.XnaUtils.ScreenManager
+﻿namespace CleverRake.XnaUtils.Application
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Content
@@ -6,7 +6,9 @@ open Microsoft.Xna.Framework.Graphics
 
 open System.Collections.Generic
 
-open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+
 
 // Interface of screens as exposed to the ScreenManager
 type Screen =

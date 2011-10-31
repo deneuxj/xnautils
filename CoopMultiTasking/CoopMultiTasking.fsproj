@@ -53,9 +53,6 @@
     <Compile Include="..\XNAUtils\PressStartScreen.fs">
       <Link>PressStartScreen.fs</Link>
     </Compile>
-    <Compile Include="..\XNAUtils\StorageComponent.fs">
-      <Link>StorageComponent.fs</Link>
-    </Compile>
     <Compile Include="..\XNAUtils\StorageTasks.fs">
       <Link>StorageTasks.fs</Link>
     </Compile>

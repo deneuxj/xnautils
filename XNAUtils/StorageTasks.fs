@@ -7,7 +7,9 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Storage
 open Microsoft.Xna.Framework.GamerServices
 
-open CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+
 open XnaExtensions
 
 let rec doOnGuide f = task {

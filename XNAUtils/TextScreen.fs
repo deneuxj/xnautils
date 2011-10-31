@@ -1,14 +1,19 @@
-﻿module CleverRake.XnaUtils.TextScreen
+﻿namespace CleverRake.XnaUtils.Application
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
+open CleverRake.XnaUtils
 open CleverRake.XnaUtils.CoopMultiTasking
-open CleverRake.XnaUtils.ScreenManager
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+
 open CleverRake.XnaUtils.XnaExtensions
 
-type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : MenuScreen.PlacementParameters) =
+open CleverRake.XnaUtils.Application
+
+type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], placement : PlacementParameters) =
     let impl = new ScreenBase<unit>()
     let impl_screen = impl :> Screen
 

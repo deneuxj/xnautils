@@ -1,16 +1,21 @@
-﻿module CleverRake.XnaUtils.PressStartScreen
+﻿module CleverRake.XnaUtils.Application.PressStartScreen
 
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
+open CleverRake.XnaUtils
 open CleverRake.XnaUtils.CoopMultiTasking
+open CleverRake.XnaUtils.CoopMultiTasking.Core
+open CleverRake.XnaUtils.CoopMultiTasking.Sys
+
+open CleverRake.XnaUtils.Application
 
 let all_players : PlayerIndex[] = [| for i in 0..3 do yield enum i |]
 
 type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
-    let impl = new ScreenManager.ScreenBase<_>()
-    let impl_screen = impl :> ScreenManager.Screen
+    let impl = new ScreenBase<_>()
+    let impl_screen = impl :> Screen
 
     let pos = ref Vector2.Zero
     let txt = "Press start"
@@ -58,7 +63,7 @@ type PressStartScreen(sys : Environment, fade_in, fade_out, blink) =
             | None -> failwith "Unreachable"
     }
 
-    interface ScreenManager.Screen with
+    interface Screen with
         member this.ClearScreenManager() = impl_screen.ClearScreenManager()
         member this.Draw() = impl_screen.Draw()
         member this.LoadContent() =
