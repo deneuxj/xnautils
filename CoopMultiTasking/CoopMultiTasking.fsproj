@@ -59,6 +59,7 @@
     <Compile Include="..\XNAUtils\StorageTasks.fs">
       <Link>StorageTasks.fs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">

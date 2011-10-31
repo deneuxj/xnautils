@@ -53,6 +53,7 @@
     <Compile Include="..\XNAUtils\TupleStruct.fs">
       <Link>TupleStruct.fs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
