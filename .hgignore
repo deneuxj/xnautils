@@ -14,3 +14,5 @@ glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Release.cachefile
 relre:^XnaReplacementWindows/bin/.*
 relre:^XnaReplacementWindows/obj/.*
 glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/Windows Copy of CoopMultitaskingSample.csproj.Debug.cachefile
+relre:/bin/Debug/
+relre:/obj/Debug/
