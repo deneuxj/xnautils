@@ -52,7 +52,6 @@
   <ItemGroup>
     <Compile Include="Hermite.fs" />
     <Compile Include="TextIcons.fs" />
-    <Compile Include="XNAExtensions.fs" />
     <Compile Include="ParallelUpdateDrawGameComponent.fs" />
     <Compile Include="Rumble.fs" />
     <Compile Include="Octree.fs" />
@@ -80,11 +79,6 @@
     <ProjectReference Include="..\Core\Core.fsproj">
       <Name>Core</Name>
       <Project>{cbff8e99-b91a-4adc-a0ad-502616413116}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\XnaReplacementWindows\XnaReplacementWindows.fsproj">
-      <Name>XnaReplacementWindows</Name>
-      <Project>{c4ade1cd-afac-4458-a0b9-72a3c621df79}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
