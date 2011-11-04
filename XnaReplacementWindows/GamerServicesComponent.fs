@@ -5,7 +5,7 @@ open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.GamerServices
 
 // Replacement for Microsoft.Xna.Framework.GamerServices.GamerServicesComponent.
-// Shows the sign in dialog when the big button is pressed.
+// Shows the sign in dialog when the back and start are pressed simultaneously.
 type GamerServicesComponent(game) =
     inherit GameComponent(game)
 
