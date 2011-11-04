@@ -54,6 +54,7 @@
       <Link>TupleStruct.fs</Link>
     </Compile>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Error.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
