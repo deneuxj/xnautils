@@ -31,7 +31,7 @@ type V = Microsoft.Xna.Framework.Vector3
 /// - Some(h, h', h''), where h is the Hermite curve, h' is the first derivative and h'' the second derivative.
 /// </returns>
 let inline hermite (p0 : ^Vec) (v0 : ^Vec) (t0 : float32) (p1 : ^Vec) (v1 : ^Vec) (t1 : float32) =
-    let (.*) x v = (^Vec : (static member Multiply : float32 * ^Vec -> ^Vec)(x, v))
+    let (.*) x v = (^Vec : (static member Multiply : ^Vec * float32 -> ^Vec)(v, x))
     let (.+) u v = (^Vec : (static member Add : ^Vec * ^Vec -> ^Vec)(u, v))
 
     match t1 - t0 with
