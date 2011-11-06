@@ -1,10 +1,8 @@
 ﻿namespace CleverRake.XnaUtils
 
-type TupleStruct2<'T1, 'T2> =
+(* Value-type tuples *)
+type StructTuple2<'T1, 'T2>(x : 'T1, y : 'T2) =
     struct
-        val Item1 : 'T1
-        val Item2 : 'T2
-
-        new(t1, t2) = { Item1 = t1; Item2 = t2 }
+        member this.Item1 = x
+        member this.Item2 = y
     end
-

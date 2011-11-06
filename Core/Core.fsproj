@@ -55,6 +55,7 @@
     </Compile>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Error.fs" />
+    <Compile Include="Misc.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
