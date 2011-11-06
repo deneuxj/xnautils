@@ -16,7 +16,7 @@ Copyright [2010, 2011] [Johann Deneux]
    limitations under the License.
 *)
 
-type Vec2 = Microsoft.Xna.Framework.Vector2
+type V = Microsoft.Xna.Framework.Vector3
 
 /// <summary>Compute the two-dimensional Hermite curve between two points</summary>
 /// The function accepts the end points, first derivative at the end points and values of the parameters at the end points.
@@ -27,10 +27,12 @@ type Vec2 = Microsoft.Xna.Framework.Vector2
 /// <param name="v1">Derivative at the end point ("speed").</param>
 /// <param name="t1">Value of the parameter at the end point ("arrival time").</param>
 /// <returns>
-/// - None if the hermite cannot be generated, because t1 <= t0.
+/// - None if the hermite cannot be generated, because t1 &lt;= t0.
 /// - Some(h, h', h''), where h is the Hermite curve, h' is the first derivative and h'' the second derivative.
 /// </returns>
-let hermite (p0 : Vec2) (v0 : Vec2) (t0 : float32) (p1 : Vec2) (v1 : Vec2) (t1 : float32) =
+let inline hermite (p0 : ^Vec) (v0 : ^Vec) (t0 : float32) (p1 : ^Vec) (v1 : ^Vec) (t1 : float32) =
+    let (.*) x v = (^Vec : (static member Multiply : float32 * ^Vec -> ^Vec)(x, v))
+    let (.+) u v = (^Vec : (static member Add : ^Vec * ^Vec -> ^Vec)(u, v))
 
     match t1 - t0 with
     | diff_t when diff_t <= 0.0f -> None
@@ -44,10 +46,10 @@ let hermite (p0 : Vec2) (v0 : Vec2) (t0 : float32) (p1 : Vec2) (v1 : Vec2) (t1 :
 
             let t = (t - t0) / diff_t
             
-            (h00 t * p0) +
-            (h10 t * diff_t * v0) +
-            (h01 t * p1) +
-            (h11 t * diff_t * v1)   
+            (h00 t .* p0) .+
+            (h10 t * diff_t .* v0) .+
+            (h01 t .* p1) .+
+            (h11 t * diff_t .* v1)   
 
         let h' t =
             let h00' t = (6.0f * t) * (t - 1.0f)
@@ -57,11 +59,11 @@ let hermite (p0 : Vec2) (v0 : Vec2) (t0 : float32) (p1 : Vec2) (v1 : Vec2) (t1 :
 
             let t = (t - t0) / diff_t
 
-            (1.0f / diff_t) *
-            ((h00' t * p0) +
-             (h10' t * diff_t * v0) +
-             (h01' t * p1) +
-             (h11' t * diff_t * v1))
+            (1.0f / diff_t) .*
+            ((h00' t .* p0) .+
+             (h10' t * diff_t .* v0) .+
+             (h01' t .* p1) .+
+             (h11' t * diff_t .* v1))
         
         let h'' t =
             let h00'' t = 12.0f * t - 6.0f
@@ -71,11 +73,11 @@ let hermite (p0 : Vec2) (v0 : Vec2) (t0 : float32) (p1 : Vec2) (v1 : Vec2) (t1 :
 
             let t = (t - t0) / diff_t
 
-            (sq (1.0f / diff_t)) *
-            ((h00'' t * p0) +
-             (h10'' t * diff_t * v0) +
-             (h01'' t * p1) +
-             (h11'' t * diff_t * v1))
+            (sq (1.0f / diff_t)) .*
+            ((h00'' t .* p0) .+
+             (h10'' t * diff_t .* v0) .+
+             (h01'' t .* p1) .+
+             (h11'' t * diff_t .* v1))
 
         Some (h, h', h'')
 
