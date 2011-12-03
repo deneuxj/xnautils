@@ -17,3 +17,5 @@ glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/Windows Copy of CoopM
 relre:/bin/Debug/
 relre:/obj/Debug/
 relre:/obj/x86/Debug
+relre:/bin/Release/
+relre:obj/x86/Release
