@@ -5,7 +5,6 @@ open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Graphics
 
 open CleverRake.XnaUtils
-open CleverRake.XnaUtils.XnaExtensions
 open CleverRake.XnaUtils.CoopMultiTasking
 open CleverRake.XnaUtils.Application
 
