@@ -1,19 +1,31 @@
 ﻿#r "System.Xml.Linq"
 #r "System.Windows.Forms"
 
+#load "../Core/Misc.fs"
+
 open System.Xml.Linq
 open System.Windows.Forms
+
+open CleverRake.XnaUtils.Maybe
 
 [<Literal>]
 let NS = "http://schemas.microsoft.com/developer/msbuild/2003"
 
-type Configuration = Config of string
+type Configuration = Config of string | AnyConfig
+type Platform = Platform of string | AnyPlatform
 
-type PcProperties = PcProps of Map<Configuration * string, string>
+type PropertyMap = PropertyMap of Map<Configuration * string * string, string>
+
+let concatProperties maps =
+    maps
+    |> Seq.map (function PropertyMap m -> Map.toSeq m)
+    |> Seq.concat
+    |> Map.ofSeq
+    |> PropertyMap
 
 module Xml =
     let xdoc (el : #seq<XElement>) = new XDocument(Array.map box (Array.ofSeq el))
-    let xname = XName.op_Implicit
+    let xname n = XName.Get(n, NS)
     let xelem s el = new XElement(s, box el)
     let xatt a b = new XAttribute(a, b) |> box
     let xstr s = box s
@@ -21,6 +33,18 @@ module Xml =
     let (|Named|_|) (elem : XElement) =
         if elem.Name.Namespace.NamespaceName = NS then
             Some elem.Name.LocalName
+        else
+            None
+
+    let (|Valued|_|) (att : XAttribute) =
+        if att.Value <> null then
+            Some att.Value
+        else
+            None
+
+    let (|AttrNamed|_|) (attr : XAttribute) =
+        if attr.Name.Namespace.NamespaceName = NS then
+            Some attr.Name.LocalName
         else
             None
 
@@ -87,46 +111,150 @@ module Parsing =
             | _ -> None
 
 open Xml
+open Parsing
 
 let dup (elem : XElement) (newSubs : seq<XElement>) =
     let subs = Seq.concat [ newSubs |> Seq.map box ; elem.Attributes() |> Seq.map box ]
     new XElement(elem.Name, subs)
 
-let parseProperties (elem : XElement) =
+let parsePropertyGroup (elem : XElement) =
     match elem with
     | Named "PropertyGroup" ->
-        match elem.Attribute(xname (NS + "/Condition")) with
-        | null -> ()
-        | attr -> ()
+        maybe {
+            let! config, platform =
+                match elem.Attribute(xname "Condition") with
+                | null -> Some (AnyConfig, AnyPlatform)
+                | attr ->
+                    match parseCondition attr.Value with
+                    | Some (config, platform) ->
+                        Some (Config config, Platform platform)
+                    | None ->
+                        None
+            
+            return
+                match platform with
+                | AnyPlatform | Platform "AnyCPU" | Platform "x86" ->
+                    let props =
+                        elem.Elements()
+                        |> Seq.map (fun sub -> (config, sub.Name.Namespace.NamespaceName, sub.Name.LocalName), sub.Value)
+                    List.ofSeq props
+                | _ ->
+                    []
+        }
 
-        elem
     | _ -> failwithf "Expected PropertyGroup, got %s" elem.Name.NamespaceName
 
-let replaceProjectGuid (elem : XElement) =
+let extractProperties (elem : XElement) =
+    elem.Elements()
+    |> Seq.filter (function Named "PropertyGroup" -> true | _ -> false)
+    |> Seq.choose parsePropertyGroup
+    |> Seq.concat
+    |> Map.ofSeq
+    |> PropertyMap
+
+let setXboxProperties (PropertyMap props) =
+    let debug = Config "Debug"
+    let release = Config "Release"
+    let common = AnyConfig
+
+    props
+    |> Map.add (common, NS, "Tailcalls") "false"
+    |> Map.add (common, NS, "NoStdLib") "true"
+    |> Map.add (common, NS, "XnaFrameworkVersion") "4.0"
+    |> Map.add (common, NS, "XnaPlatform") "Xbox 360"
+    |> Map.add (common, NS, "XnaOututType") "Library"
+    |> Map.add (debug, NS, "OutputPath") "bin\\Xbox 360\\Debug"
+    |> Map.add (debug, NS, "DebugSymbols") "true"
+    |> Map.add (debug, NS, "DebugType") "full"
+    |> Map.add (debug, NS, "Optimize") "false"
+    |> Map.add (debug, NS, "DefineConstrants") "DEBUG;TRACE;XBOX;XBOX360"
+    |> Map.add (release, NS, "OutputPath") "bin\\Xbox 360\\Release"
+    |> Map.add (release, NS, "DebugType") "pdbonly"
+    |> Map.add (release, NS, "Optimize") "true"
+    |> Map.add (release, NS, "DefineConstrants") "TRACE;XBOX;XBOX360"
+    |> PropertyMap
+
+let setProjectGuid (PropertyMap props) =
     let guid = System.Guid.NewGuid()
 
-    match elem with
-    | Named "ProjectGuid" -> xelem (elem.Name) [ xstr ("{" + (guid.ToString()) + "}") ]
-    | _ -> elem
+    props
+    |> Map.add (AnyConfig, NS, "ProjectGuid") ("{" + (guid.ToString()) + "}")
+    |> PropertyMap
 
-let handleGroup (group : XElement) =
-    match group with
-    | Named "PropertyGroup" ->
+let handleItem item =
+    match item with
+    | Named "Reference" ->
+        let hintOverride =
+            match item.Attribute(xname "Include") with
+            | null -> None
+            | Valued "Microsoft.Xna.Framework" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.dll"
+            | Valued "Microsoft.Xna.Framework.Game" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Game.dll"
+            | Valued "Microsoft.Xna.Framework.GamerServices" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.GamerServices.dll"
+            | Valued "Microsoft.Xna.Framework.Graphics" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Graphics.dll"
+            | Valued "Microsoft.Xna.Framework.Storage" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Storage.dll"
+            | Valued "mscorlib" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\mscorlib.dll"
+            | Valued "System" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\System.dll"
+            | Valued "System.Core" ->
+                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\System.Core.dll"
+            | Valued "FSharp.Core" ->
+                Some @"Dependencies\FShap.Core.dll"
+            | _ -> None
+
+        let requiredTargetFrameworkOverride =
+            match item.Attribute(xname "Include") with
+            | null -> None
+            | Valued "System.Core" ->
+                Some "4.0"
+            | _ -> None
+
         let subs =
-            group.Elements()
-            |> Seq.map replaceProjectGuid
+            item.Elements()
+            |> Seq.map (fun child ->
+                match child with
+                | Named "HintPath" ->
+                    match hintOverride with
+                    | None -> child
+                    | Some x -> xelem (xname "HintPath") [ xstr x ]
+                | _ -> child)
+            |> Seq.append (
+                    match requiredTargetFrameworkOverride with
+                    | Some x ->
+                        [ xelem (xname "RequiredTargetFramework") [ xstr x ] ]
+                    | None ->
+                        [])
 
-        dup group subs
-    | _ -> group
+        dup item subs
+    | _ -> item
+
+let handleItemGroup (group : XElement) =
+    let subs =
+        group.Elements()
+        |> Seq.map handleItem
+
+    dup group subs
 
 let handleProject (project : XElement) =
     match project with
     | Named "Project" ->
-        let subs =
+        let properties =
             project.Elements()
-            |> Seq.map handleGroup
+            |> Seq.map extractProperties
+            |> concatProperties
+            |> setXboxProperties
 
-        dup project subs
+        let imports =
+            project.Elements()
+            |> Seq.filter (function Named "Import" -> true | _ -> false)
+            |> Seq.append [xelem (xname "Import") [ xatt (xname "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
+
+        failwith "TODO"
     | _ -> failwithf "Expected element Project, got %s" project.Name.NamespaceName
 
 let handleDoc (data : XDocument) =
