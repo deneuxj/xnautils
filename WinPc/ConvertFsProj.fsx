@@ -182,27 +182,34 @@ let setProjectGuid (PropertyMap props) =
     |> PropertyMap
 
 let handleItem item =
+    let provided =
+        [ "Microsoft.Xna.Framework.Avatar" ;
+          "Microsoft.Xna.Framework" ;
+          "Microsoft.Xna.Framework.Game" ;
+          "Microsoft.Xna.Framework.GamerServices" ;
+          "Microsoft.Xna.Framework.Graphics" ;
+          "Microsoft.Xna.Framework.Input.Touch" ;
+          "Microsoft.Xna.Framework.Net" ;
+          "Microsoft.Xna.Framework.Storage" ;
+          "Microsoft.Xna.Framework.Video" ;
+          "Microsoft.Xna.Framework.Xact" ;
+          "mscorlib" ;
+          "System.Core" ;
+          "System" ;
+          "System.Net" ;
+          "System.Xml" ;
+          "System.Xml.Linq" ;
+          "System.Xml.Serialization" ]
+        |> Set.ofList
+
+    let path x = @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\" + x |> Some
+
     match item with
     | Named "Reference" ->
         let hintOverride =
             match item.Attribute(xname "Include") with
             | null -> None
-            | Valued "Microsoft.Xna.Framework" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.dll"
-            | Valued "Microsoft.Xna.Framework.Game" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Game.dll"
-            | Valued "Microsoft.Xna.Framework.GamerServices" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.GamerServices.dll"
-            | Valued "Microsoft.Xna.Framework.Graphics" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Graphics.dll"
-            | Valued "Microsoft.Xna.Framework.Storage" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Storage.dll"
-            | Valued "mscorlib" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\mscorlib.dll"
-            | Valued "System" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\System.dll"
-            | Valued "System.Core" ->
-                Some @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\System.Core.dll"
+            | Valued dll when provided.Contains(dll) -> path dll
             | Valued "FSharp.Core" ->
                 Some @"Dependencies\FShap.Core.dll"
             | _ -> None
