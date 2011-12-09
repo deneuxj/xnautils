@@ -35,7 +35,8 @@ let concatProperties maps =
 
 module Xml =
     let xdoc (el : #seq<XElement>) = new XDocument(Array.map box (Array.ofSeq el))
-    let xname n = XName.Get(n, NS)
+    let xNsName n = XName.Get(n, NS)
+    let xname n = XName.op_Implicit n
     let xelem s el = new XElement(s, box el)
     let xatt a b = new XAttribute(a, b) |> box
     let xstr s = box s
@@ -144,7 +145,7 @@ let dumpProperties (PropertyMap props) =
             xelem (XName.Get(ln, ns)) (xstr value)
             |> box)
         |> fun subs ->
-            xelem (xname "PropertyGroup") (Seq.append [ xatt (xname "Condition") (xstr condition) ] subs)
+            xelem (xNsName "PropertyGroup") (Seq.append [ xatt (xNsName "Condition") (xstr condition) ] subs)
     )
 
 let parsePropertyGroup (elem : XElement) =
@@ -152,7 +153,7 @@ let parsePropertyGroup (elem : XElement) =
     | Named "PropertyGroup" ->
         maybe {
             let! config, platform =
-                match elem.Attribute(xname "Condition") with
+                match elem.Attribute(xNsName "Condition") with
                 | null -> Some (AnyConfig, AnyPlatform)
                 | attr ->
                     match parseCondition attr.Value with
@@ -240,38 +241,57 @@ let handleItem item =
 
     let path x = @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\" + x |> Some
 
-    eprintfn "**** %A" item
+    let (|ValuedDll|_|) att =
+        let getDll (dllSpec : string) =
+            dllSpec.Split [|','|]
+            |> Seq.head
+            |> fun x -> x.Trim()
+
+        match att with
+        | Valued spec ->
+            spec |> getDll |> Some
+        | _ -> None
 
     match item with
     | Named "Reference" ->
         let hintOverride =
             match item.Attribute(xname "Include") with
             | null -> None
-            | Valued dll when provided.Contains(dll) -> path dll
-            | Valued "FSharp.Core" ->
+            | ValuedDll dll when provided.Contains(dll) -> path dll
+            | ValuedDll "FSharp.Core" ->
                 Some @"Dependencies\FShap.Core.dll"
             | _ -> None
 
         let requiredTargetFrameworkOverride =
             match item.Attribute(xname "Include") with
             | null -> None
-            | Valued "System.Core" ->
+            | ValuedDll "System.Core" ->
                 Some "4.0"
             | _ -> None
 
         let subs =
             item.Elements()
-            |> Seq.map (fun child ->
+            |> Seq.choose (fun child ->
                 match child with
                 | Named "HintPath" ->
                     match hintOverride with
-                    | None -> child
-                    | Some x -> xelem (xname "HintPath") [ xstr x ]
-                | _ -> child)
+                    | None -> Some child
+                    | Some _ -> None
+                | Named "RequiredTargetFramework" ->
+                    match requiredTargetFrameworkOverride with
+                    | None -> Some child
+                    | Some _ -> None
+                | _ -> Some child)
+            |> Seq.append (
+                    match hintOverride with
+                    | Some x ->
+                        [ xelem (xNsName "HintPath") [ xstr x ] ]
+                    | None ->
+                        [])
             |> Seq.append (
                     match requiredTargetFrameworkOverride with
                     | Some x ->
-                        [ xelem (xname "RequiredTargetFramework") [ xstr x ] ]
+                        [ xelem (xNsName "RequiredTargetFramework") [ xstr x ] ]
                     | None ->
                         [])
 
@@ -304,7 +324,7 @@ let handleProject (project : XElement) =
         let imports =
             project.Elements()
             |> Seq.filter (function Named "Import" -> true | _ -> false)
-            |> Seq.append [xelem (xname "Import") [ xatt (xname "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
+            |> Seq.append [xelem (xNsName "Import") [ xatt (xNsName "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
 
         let rest =
             project.Elements()
