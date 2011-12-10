@@ -14,23 +14,52 @@ let NS = "http://schemas.microsoft.com/developer/msbuild/2003"
 type Configuration = Config of string | AnyConfig
 type Platform = Platform of string | AnyPlatform
 
-type PropertyMap = PropertyMap of Map<Configuration * string * string, string>
+type PropertyMap = PropertyMap of Map<Configuration * string * string, string * XAttribute seq > // Configuration, item name, item namespace, value, attributes
 
-type PropertyFixer = FixerMap of Map<Configuration * string * string, string -> string>
+type PropertyFixer = FixerMap of Map<Configuration * string * string, string -> string> // Configuration, item name, item namespace, value correction function
 
-let fixProperties (FixerMap fixer) (PropertyMap props) =
-    props
-    |> Map.map (fun k v ->
-        match Map.tryFind k fixer with
-        | Some f -> f v
-        | None -> v)
-    |> PropertyMap
+let concatMaps maps =
+    maps
+    |> Seq.map Map.toSeq
+    |> Seq.concat
+    |> Map.ofSeq
 
 let concatProperties maps =
     maps
-    |> Seq.map (function PropertyMap m -> Map.toSeq m)
-    |> Seq.concat
-    |> Map.ofSeq
+    |> Seq.map (function PropertyMap m -> m)
+    |> concatMaps
+    |> PropertyMap
+
+let fixProperties (FixerMap fixer) (PropertyMap props) =
+    let fixerKeys =
+        fixer
+        |> Map.toSeq
+        |> Seq.map fst
+        |> Set.ofSeq
+
+    let providedKeys =
+        props
+        |> Map.toSeq
+        |> Seq.map fst
+        |> Set.ofSeq
+
+    let keysToAdd = Set.difference fixerKeys providedKeys
+    let addedProps =
+        keysToAdd
+        |> Seq.map (fun k -> (k, ("", Seq.empty)))
+        |> Map.ofSeq
+            
+    [ props ; addedProps ]
+    |> concatMaps
+    |> Map.map (fun ((config, ln, ns) as k) (v, att) ->
+        match Map.tryFind k fixer with
+        | Some f -> f v
+        | None ->
+            match Map.tryFind (AnyConfig, ln, ns) fixer with
+            | Some f -> f v
+            | None -> v
+        ,
+        att)
     |> PropertyMap
 
 module Xml =
@@ -95,7 +124,7 @@ module Parsing =
 
     let close data =
         match data with
-        | Some ("", data) -> Some data
+        | Some ("", data) -> data |> List.rev |> Some
         | _ -> None
 
     let parseCondition (s : string) =
@@ -133,19 +162,24 @@ let dumpProperties (PropertyMap props) =
     |> Map.toSeq
     |> Seq.map (fun ((config, ns, ln), value) -> (config, (ns, ln, value)))
     |> Seq.groupBy fst
+    |> Seq.sortBy (function (AnyConfig, _) -> "" | (Config config, _) -> config)
     |> Seq.map (fun (config, props) ->
         let condition =
             match config with
             | AnyConfig ->
-                sprintf "'$(Platform)' == 'Xbox360'"
+                None
             | Config c ->
-                sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox360'" c
+                Some <| sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox360'" c
         props
-        |> Seq.map (fun (_, (ns, ln, value)) ->
-            xelem (XName.Get(ln, ns)) (xstr value)
+        |> Seq.map (fun (_, (ns, ln, (value, att))) ->
+            xelem (XName.Get(ln, ns)) (Seq.append [(xstr value)] (att |> Seq.map box))
             |> box)
         |> fun subs ->
-            xelem (xNsName "PropertyGroup") (Seq.append [ xatt (xNsName "Condition") (xstr condition) ] subs)
+            xelem
+                (xNsName "PropertyGroup")
+                (match condition with
+                 | Some condition -> Seq.append [ xatt (xname "Condition") (xstr condition) ] subs
+                 | None -> subs)
     )
 
 let parsePropertyGroup (elem : XElement) =
@@ -153,7 +187,7 @@ let parsePropertyGroup (elem : XElement) =
     | Named "PropertyGroup" ->
         maybe {
             let! config, platform =
-                match elem.Attribute(xNsName "Condition") with
+                match elem.Attribute(xname "Condition") with
                 | null -> Some (AnyConfig, AnyPlatform)
                 | attr ->
                     match parseCondition attr.Value with
@@ -161,13 +195,13 @@ let parsePropertyGroup (elem : XElement) =
                         Some (Config config, Platform platform)
                     | None ->
                         None
-            
+
             return
                 match platform with
                 | AnyPlatform | Platform "AnyCPU" | Platform "x86" ->
                     let props =
                         elem.Elements()
-                        |> Seq.map (fun sub -> (config, sub.Name.Namespace.NamespaceName, sub.Name.LocalName), sub.Value)
+                        |> Seq.map (fun sub -> (config, sub.Name.Namespace.NamespaceName, sub.Name.LocalName), (sub.Value, sub.Attributes()))
                     List.ofSeq props
                 | _ ->
                     []
@@ -200,6 +234,7 @@ let setXboxProperties =
     |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "4.0")
     |> Map.add (common, NS, "XnaPlatform") (overWriteWith "Xbox 360")
     |> Map.add (common, NS, "XnaOututType") (overWriteWith "Library")
+    |> Map.add (common, NS, "Platform") (overWriteWith "Xbox360")
     |> Map.add (debug, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Debug")
     |> Map.add (debug, NS, "DebugSymbols") (overWriteWith "true")
     |> Map.add (debug, NS, "DebugType") (overWriteWith "full")
@@ -211,12 +246,12 @@ let setXboxProperties =
     |> Map.add (release, NS, "DefineConstants") (addIfMissing "TRACE" >> addIfMissing "XBOX" >> addIfMissing "XBOX360")
     |> FixerMap
 
-let setProjectGuid (PropertyMap props) =
+let setProjectGuid (FixerMap props) =
     let guid = System.Guid.NewGuid()
 
     props
-    |> Map.add (AnyConfig, NS, "ProjectGuid") ("{" + (guid.ToString()) + "}")
-    |> PropertyMap
+    |> Map.add (AnyConfig, NS, "ProjectGuid") (fun _ -> "{" + (guid.ToString()) + "}")
+    |> FixerMap
 
 let handleItem item =
     let provided =
@@ -271,7 +306,7 @@ let handleItem item =
 
         let subs =
             item.Elements()
-            |> Seq.choose (fun child ->
+            |> Seq.choose (fun child -> // Remove HintPath and RequiredTargetFramework if we have overriding values.
                 match child with
                 | Named "HintPath" ->
                     match hintOverride with
@@ -282,13 +317,13 @@ let handleItem item =
                     | None -> Some child
                     | Some _ -> None
                 | _ -> Some child)
-            |> Seq.append (
+            |> Seq.append ( // Set HintPath if override available.
                     match hintOverride with
                     | Some x ->
                         [ xelem (xNsName "HintPath") [ xstr x ] ]
                     | None ->
                         [])
-            |> Seq.append (
+            |> Seq.append ( // Set RequiredTargetFramework if override available.
                     match requiredTargetFrameworkOverride with
                     | Some x ->
                         [ xelem (xNsName "RequiredTargetFramework") [ xstr x ] ]
@@ -313,7 +348,7 @@ let handleProject (project : XElement) =
             |> Seq.filter (function Named "PropertyGroup" -> true | _ -> false)
             |> Seq.map extractProperties
             |> concatProperties
-            |> fixProperties setXboxProperties
+            |> fixProperties (setXboxProperties |> setProjectGuid)
             |> dumpProperties
 
         let itemGroups =
@@ -341,7 +376,7 @@ let handleDoc (data : XDocument) =
     |> xdoc
 
 let doc2 =
-    XDocument.Load(@"C:\Users\johann\Documents\xnautils\XNAUtils\XNAUtils.fsproj")
+    XDocument.Load(@"C:\Users\johann\Documents\xnautils\Samples\CoopMultiTaskingSample\Lib\LibWinPC.fsproj")
     |> handleDoc
 
 printfn "%s" (doc2.ToString())
