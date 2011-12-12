@@ -100,6 +100,9 @@ module Conversion =
     open Parsing
     open CleverRake.XnaUtils.Maybe
 
+    type ConversionConfig =
+        { fsCorePath : string }
+
     type Configuration = Config of string | AnyConfig
     type Platform = Platform of string | AnyPlatform
 
@@ -167,7 +170,7 @@ module Conversion =
                 | AnyConfig ->
                     None
                 | Config c ->
-                    Some <| sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox360'" c
+                    Some <| sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox 360'" c
             props
             |> Seq.map (fun (_, (ns, ln, (value, att))) ->
                 xelem (XName.Get(ln, ns)) (Seq.append [(xstr value)] (att |> Seq.map box))
@@ -232,7 +235,7 @@ module Conversion =
         |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "v4.0")
         |> Map.add (common, NS, "XnaPlatform") (overWriteWith "Xbox 360")
         |> Map.add (common, NS, "XnaOututType") (overWriteWith "Library")
-        |> Map.add (common, NS, "Platform") (overWriteWith "Xbox360")
+        |> Map.add (common, NS, "Platform") (overWriteWith "Xbox 360")
         |> Map.add (debug, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Debug")
         |> Map.add (debug, NS, "DebugSymbols") (overWriteWith "true")
         |> Map.add (debug, NS, "DebugType") (overWriteWith "full")
@@ -338,7 +341,7 @@ module Conversion =
 
         dup group subs
 
-    let handleProject (project : XElement) =
+    let handleProject opts (project : XElement) =
         match project with
         | Named "Project" ->
             let properties =
@@ -363,13 +366,21 @@ module Conversion =
                 project.Elements()
                 |> Seq.filter (function Named "Import" | Named "PropertyGroup" | Named "ItemGroup" -> false | _ -> true)
 
-            dup project (Seq.concat [ properties ; imports ; itemGroups ; rest ])
+            let fsDeps =
+                xelem (xNsName "ItemGroup")
+                    [ xelem (xNsName "None") [ xatt (xname "Include") (opts.fsCorePath + @"\FSharp.Core.dll") ] ;
+                      xelem (xNsName "None") [ xatt (xname "Include") (opts.fsCorePath + @"\FSharp.Core.optdata") ] ;
+                      xelem (xNsName "None") [ xatt (xname "Include") (opts.fsCorePath + @"\FSharp.Core.sigdata") ] ;
+                      xelem (xNsName "None") [ xatt (xname "Include") (opts.fsCorePath + @"\FSharp.Core.xml") ] ]
+                |> Seq.singleton
+
+            dup project (Seq.concat [ properties ; imports ; itemGroups ; fsDeps ; rest ])
         | _ -> failwithf "Expected element Project, got %s" project.Name.NamespaceName
 
-    let handleDoc (data : XDocument) =
+    let handleDoc opts (data : XDocument) =
         seq {
             for child in data.Elements() do
-                yield handleProject child
+                yield handleProject opts child
         }
         |> xdoc
 
@@ -383,12 +394,31 @@ let paths =
       (@"CoopMultitasking", "CoopMultitasking.fsproj", "CoopMultitaskingXbox360.fsproj") ;
       (@"Samples\CoopMultitaskingSample\Lib", "LibWinPc.fsproj", "LibXbox360.fsproj") ]
 
+let mkDotDot (path : string) =
+    let countUp (path : string) =
+        let goUp (path : string) =
+            System.IO.Path.GetDirectoryName(path)
+
+        let rec work path n =
+            match goUp path with
+            | "" -> None
+            | p when p = here -> Some n
+            | p -> work p (n + 1)
+        if path = here then
+            Some 0
+        else
+            work path 1
+
+    match countUp path with
+    | Some n -> Array.create n ".." |> fun xs -> System.String.Join("\\", xs)
+    | None -> failwith "Could not compute path to FSharp.Core.dll relative to here"
+
 for (path, inName, outName) in paths do
     let path = System.IO.Path.Combine(here, path)
 
     let doc2 =
         XDocument.Load(System.IO.Path.Combine(path, inName))
-        |> handleDoc
+        |> handleDoc { fsCorePath = mkDotDot path + @"\FSharpCore" }
 
     let outPath = System.IO.Path.Combine(path, outName)
     let overwrite = true
