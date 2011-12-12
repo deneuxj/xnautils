@@ -293,7 +293,7 @@ module Conversion =
             let hintOverride =
                 match item.Attribute(xname "Include") with
                 | null -> None
-                | ValuedDll dll when provided.Contains(dll) -> path dll
+                | ValuedDll dll when provided.Contains(dll) -> None //path dll
                 | ValuedDll "FSharp.Core" ->
                     Some @"Dependencies\FShap.Core.dll"
                 | _ -> None
