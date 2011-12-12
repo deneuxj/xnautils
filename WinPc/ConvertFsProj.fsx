@@ -229,7 +229,7 @@ module Conversion =
         Map.empty
         |> Map.add (common, NS, "Tailcalls") (overWriteWith "false")
         |> Map.add (common, NS, "NoStdLib") (overWriteWith "true")
-        |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "4.0")
+        |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "v4.0")
         |> Map.add (common, NS, "XnaPlatform") (overWriteWith "Xbox 360")
         |> Map.add (common, NS, "XnaOututType") (overWriteWith "Library")
         |> Map.add (common, NS, "Platform") (overWriteWith "Xbox360")
@@ -357,7 +357,7 @@ module Conversion =
             let imports =
                 project.Elements()
                 |> Seq.filter (function Named "Import" -> true | _ -> false)
-                |> Seq.append [xelem (xNsName "Import") [ xatt (xNsName "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
+                |> Seq.append [xelem (xNsName "Import") [ xatt (xname "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
 
             let rest =
                 project.Elements()
