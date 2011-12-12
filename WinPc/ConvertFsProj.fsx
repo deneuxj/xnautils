@@ -375,10 +375,24 @@ let handleDoc (data : XDocument) =
     }
     |> xdoc
 
-let doc2 =
-    XDocument.Load(@"C:\Users\johann\Documents\xnautils\Samples\CoopMultiTaskingSample\Lib\LibWinPC.fsproj")
-    |> handleDoc
+let here = @"C:\Users\johann\Documents\xnautils"
 
-printfn "%s" (doc2.ToString())
+let paths =
+    [ (@"Core", "Core.fsproj", "CoreXbox360.fsproj") ;
+      (@"XNAUtils", "XNAUtils.fsproj", "XNAUtilsXbox360.fsproj") ;
+      (@"CoopMultitasking", "CoopMultitasking.fsproj", "CoopMultitaskingXbox360.fsproj") ;
+      (@"Samples\CoopMultitaskingSample\Lib", "LibWinPc.fsproj", "LibXbox360.fsproj") ]
 
-()
+for (path, inName, outName) in paths do
+    let path = System.IO.Path.Combine(here, path)
+
+    let doc2 =
+        XDocument.Load(System.IO.Path.Combine(path, inName))
+        |> handleDoc
+
+    let outPath = System.IO.Path.Combine(path, outName)
+    let overwrite = true
+    if overwrite || not <| System.IO.File.Exists(outPath) then
+        doc2.Save(outPath)
+    else
+        eprintfn "Output file already exists."
