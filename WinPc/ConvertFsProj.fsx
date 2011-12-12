@@ -1,68 +1,13 @@
 ﻿#r "System.Xml.Linq"
-#r "System.Windows.Forms"
 
-#load "../Core/Misc.fs"
+#load "../Core/Misc.fs" // For maybe workflow
 
 open System.Xml.Linq
-open System.Windows.Forms
-
-open CleverRake.XnaUtils.Maybe
-
-[<Literal>]
-let NS = "http://schemas.microsoft.com/developer/msbuild/2003"
-
-type Configuration = Config of string | AnyConfig
-type Platform = Platform of string | AnyPlatform
-
-type PropertyMap = PropertyMap of Map<Configuration * string * string, string * XAttribute seq > // Configuration, item name, item namespace, value, attributes
-
-type PropertyFixer = FixerMap of Map<Configuration * string * string, string -> string> // Configuration, item name, item namespace, value correction function
-
-let concatMaps maps =
-    maps
-    |> Seq.map Map.toSeq
-    |> Seq.concat
-    |> Map.ofSeq
-
-let concatProperties maps =
-    maps
-    |> Seq.map (function PropertyMap m -> m)
-    |> concatMaps
-    |> PropertyMap
-
-let fixProperties (FixerMap fixer) (PropertyMap props) =
-    let fixerKeys =
-        fixer
-        |> Map.toSeq
-        |> Seq.map fst
-        |> Set.ofSeq
-
-    let providedKeys =
-        props
-        |> Map.toSeq
-        |> Seq.map fst
-        |> Set.ofSeq
-
-    let keysToAdd = Set.difference fixerKeys providedKeys
-    let addedProps =
-        keysToAdd
-        |> Seq.map (fun k -> (k, ("", Seq.empty)))
-        |> Map.ofSeq
-            
-    [ props ; addedProps ]
-    |> concatMaps
-    |> Map.map (fun ((config, ln, ns) as k) (v, att) ->
-        match Map.tryFind k fixer with
-        | Some f -> f v
-        | None ->
-            match Map.tryFind (AnyConfig, ln, ns) fixer with
-            | Some f -> f v
-            | None -> v
-        ,
-        att)
-    |> PropertyMap
 
 module Xml =
+    [<Literal>]
+    let NS = "http://schemas.microsoft.com/developer/msbuild/2003"
+
     let xdoc (el : #seq<XElement>) = new XDocument(Array.map box (Array.ofSeq el))
     let xNsName n = XName.Get(n, NS)
     let xname n = XName.op_Implicit n
@@ -150,230 +95,285 @@ module Parsing =
             | Some [config ; platform] -> Some (unbox<string> config, unbox<string> platform)
             | _ -> None
 
-open Xml
-open Parsing
+module Conversion =
+    open Xml
+    open Parsing
+    open CleverRake.XnaUtils.Maybe
 
-let dup (elem : XElement) (newSubs : seq<XElement>) =
-    let subs = Seq.concat [ newSubs |> Seq.map box ; elem.Attributes() |> Seq.map box ]
-    new XElement(elem.Name, subs)
+    type Configuration = Config of string | AnyConfig
+    type Platform = Platform of string | AnyPlatform
 
-let dumpProperties (PropertyMap props) =
-    props
-    |> Map.toSeq
-    |> Seq.map (fun ((config, ns, ln), value) -> (config, (ns, ln, value)))
-    |> Seq.groupBy fst
-    |> Seq.sortBy (function (AnyConfig, _) -> "" | (Config config, _) -> config)
-    |> Seq.map (fun (config, props) ->
-        let condition =
-            match config with
-            | AnyConfig ->
-                None
-            | Config c ->
-                Some <| sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox360'" c
+    type PropertyMap = PropertyMap of Map<Configuration * string * string, string * XAttribute seq > // Configuration, item name, item namespace, value, attributes
+
+    type PropertyFixer = FixerMap of Map<Configuration * string * string, string -> string> // Configuration, item name, item namespace, value correction function
+
+    let concatMaps maps =
+        maps
+        |> Seq.map Map.toSeq
+        |> Seq.concat
+        |> Map.ofSeq
+
+    let concatProperties maps =
+        maps
+        |> Seq.map (function PropertyMap m -> m)
+        |> concatMaps
+        |> PropertyMap
+
+    let fixProperties (FixerMap fixer) (PropertyMap props) =
+        let fixerKeys =
+            fixer
+            |> Map.toSeq
+            |> Seq.map fst
+            |> Set.ofSeq
+
+        let providedKeys =
+            props
+            |> Map.toSeq
+            |> Seq.map fst
+            |> Set.ofSeq
+
+        let keysToAdd = Set.difference fixerKeys providedKeys
+        let addedProps =
+            keysToAdd
+            |> Seq.map (fun k -> (k, ("", Seq.empty)))
+            |> Map.ofSeq
+            
+        [ props ; addedProps ]
+        |> concatMaps
+        |> Map.map (fun ((config, ln, ns) as k) (v, att) ->
+            match Map.tryFind k fixer with
+            | Some f -> f v
+            | None ->
+                match Map.tryFind (AnyConfig, ln, ns) fixer with
+                | Some f -> f v
+                | None -> v
+            ,
+            att)
+        |> PropertyMap
+
+    let dup (elem : XElement) (newSubs : seq<XElement>) =
+        let subs = Seq.concat [ newSubs |> Seq.map box ; elem.Attributes() |> Seq.map box ]
+        new XElement(elem.Name, subs)
+
+    let dumpProperties (PropertyMap props) =
         props
-        |> Seq.map (fun (_, (ns, ln, (value, att))) ->
-            xelem (XName.Get(ln, ns)) (Seq.append [(xstr value)] (att |> Seq.map box))
-            |> box)
-        |> fun subs ->
-            xelem
-                (xNsName "PropertyGroup")
-                (match condition with
-                 | Some condition -> Seq.append [ xatt (xname "Condition") (xstr condition) ] subs
-                 | None -> subs)
-    )
+        |> Map.toSeq
+        |> Seq.map (fun ((config, ns, ln), value) -> (config, (ns, ln, value)))
+        |> Seq.groupBy fst
+        |> Seq.sortBy (function (AnyConfig, _) -> "" | (Config config, _) -> config)
+        |> Seq.map (fun (config, props) ->
+            let condition =
+                match config with
+                | AnyConfig ->
+                    None
+                | Config c ->
+                    Some <| sprintf "'$(Configuration)|$(Platform)' == '%s|Xbox360'" c
+            props
+            |> Seq.map (fun (_, (ns, ln, (value, att))) ->
+                xelem (XName.Get(ln, ns)) (Seq.append [(xstr value)] (att |> Seq.map box))
+                |> box)
+            |> fun subs ->
+                xelem
+                    (xNsName "PropertyGroup")
+                    (match condition with
+                     | Some condition -> Seq.append [ xatt (xname "Condition") (xstr condition) ] subs
+                     | None -> subs)
+        )
 
-let parsePropertyGroup (elem : XElement) =
-    match elem with
-    | Named "PropertyGroup" ->
-        maybe {
-            let! config, platform =
-                match elem.Attribute(xname "Condition") with
-                | null -> Some (AnyConfig, AnyPlatform)
-                | attr ->
-                    match parseCondition attr.Value with
-                    | Some (config, platform) ->
-                        Some (Config config, Platform platform)
-                    | None ->
-                        None
+    let parsePropertyGroup (elem : XElement) =
+        match elem with
+        | Named "PropertyGroup" ->
+            maybe {
+                let! config, platform =
+                    match elem.Attribute(xname "Condition") with
+                    | null -> Some (AnyConfig, AnyPlatform)
+                    | attr ->
+                        match parseCondition attr.Value with
+                        | Some (config, platform) ->
+                            Some (Config config, Platform platform)
+                        | None ->
+                            None
 
-            return
-                match platform with
-                | AnyPlatform | Platform "AnyCPU" | Platform "x86" ->
-                    let props =
-                        elem.Elements()
-                        |> Seq.map (fun sub -> (config, sub.Name.Namespace.NamespaceName, sub.Name.LocalName), (sub.Value, sub.Attributes()))
-                    List.ofSeq props
-                | _ ->
-                    []
-        }
+                return
+                    match platform with
+                    | AnyPlatform | Platform "AnyCPU" | Platform "x86" ->
+                        let props =
+                            elem.Elements()
+                            |> Seq.map (fun sub -> (config, sub.Name.Namespace.NamespaceName, sub.Name.LocalName), (sub.Value, sub.Attributes()))
+                        List.ofSeq props
+                    | _ ->
+                        []
+            }
 
-    | _ -> failwithf "Expected PropertyGroup, got %s" elem.Name.NamespaceName
+        | _ -> failwithf "Expected PropertyGroup, got %s" elem.Name.NamespaceName
 
-let extractProperties (elem : XElement) =
-    elem
-    |> parsePropertyGroup
-    |> function Some x -> x | None -> failwith "Failed to parse property group"
-    |> Map.ofList
-    |> PropertyMap
+    let extractProperties (elem : XElement) =
+        elem
+        |> parsePropertyGroup
+        |> function Some x -> x | None -> failwith "Failed to parse property group"
+        |> Map.ofList
+        |> PropertyMap
 
-let setXboxProperties =
-    let debug = Config "Debug"
-    let release = Config "Release"
-    let common = AnyConfig
+    let setXboxProperties =
+        let debug = Config "Debug"
+        let release = Config "Release"
+        let common = AnyConfig
 
-    let overWriteWith x _ = x
-    let addIfMissing x (s : string) =
-        let items = s.Split [| ';' |]
-        match items |> Seq.tryFind ((=) x) with
-        | Some _ -> s
-        | None -> s + ";" + x
+        let overWriteWith x _ = x
+        let addIfMissing x (s : string) =
+            let items = s.Split [| ';' |]
+            match items |> Seq.tryFind ((=) x) with
+            | Some _ -> s
+            | None -> s + ";" + x
 
-    Map.empty
-    |> Map.add (common, NS, "Tailcalls") (overWriteWith "false")
-    |> Map.add (common, NS, "NoStdLib") (overWriteWith "true")
-    |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "4.0")
-    |> Map.add (common, NS, "XnaPlatform") (overWriteWith "Xbox 360")
-    |> Map.add (common, NS, "XnaOututType") (overWriteWith "Library")
-    |> Map.add (common, NS, "Platform") (overWriteWith "Xbox360")
-    |> Map.add (debug, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Debug")
-    |> Map.add (debug, NS, "DebugSymbols") (overWriteWith "true")
-    |> Map.add (debug, NS, "DebugType") (overWriteWith "full")
-    |> Map.add (debug, NS, "Optimize") (overWriteWith "false")
-    |> Map.add (debug, NS, "DefineConstants") (addIfMissing "DEBUG" >> addIfMissing "TRACE" >> addIfMissing "XBOX" >> addIfMissing "XBOX360")
-    |> Map.add (release, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Release")
-    |> Map.add (release, NS, "DebugType") (overWriteWith "pdbonly")
-    |> Map.add (release, NS, "Optimize") (overWriteWith "true")
-    |> Map.add (release, NS, "DefineConstants") (addIfMissing "TRACE" >> addIfMissing "XBOX" >> addIfMissing "XBOX360")
-    |> FixerMap
+        Map.empty
+        |> Map.add (common, NS, "Tailcalls") (overWriteWith "false")
+        |> Map.add (common, NS, "NoStdLib") (overWriteWith "true")
+        |> Map.add (common, NS, "XnaFrameworkVersion") (overWriteWith "4.0")
+        |> Map.add (common, NS, "XnaPlatform") (overWriteWith "Xbox 360")
+        |> Map.add (common, NS, "XnaOututType") (overWriteWith "Library")
+        |> Map.add (common, NS, "Platform") (overWriteWith "Xbox360")
+        |> Map.add (debug, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Debug")
+        |> Map.add (debug, NS, "DebugSymbols") (overWriteWith "true")
+        |> Map.add (debug, NS, "DebugType") (overWriteWith "full")
+        |> Map.add (debug, NS, "Optimize") (overWriteWith "false")
+        |> Map.add (debug, NS, "DefineConstants") (addIfMissing "DEBUG" >> addIfMissing "TRACE" >> addIfMissing "XBOX" >> addIfMissing "XBOX360")
+        |> Map.add (release, NS, "OutputPath") (overWriteWith "bin\\Xbox 360\\Release")
+        |> Map.add (release, NS, "DebugType") (overWriteWith "pdbonly")
+        |> Map.add (release, NS, "Optimize") (overWriteWith "true")
+        |> Map.add (release, NS, "DefineConstants") (addIfMissing "TRACE" >> addIfMissing "XBOX" >> addIfMissing "XBOX360")
+        |> FixerMap
 
-let setProjectGuid (FixerMap props) =
-    let guid = System.Guid.NewGuid()
+    let setProjectGuid (FixerMap props) =
+        let guid = System.Guid.NewGuid()
 
-    props
-    |> Map.add (AnyConfig, NS, "ProjectGuid") (fun _ -> "{" + (guid.ToString()) + "}")
-    |> FixerMap
+        props
+        |> Map.add (AnyConfig, NS, "ProjectGuid") (fun _ -> "{" + (guid.ToString()) + "}")
+        |> FixerMap
 
-let handleItem item =
-    let provided =
-        [ "Microsoft.Xna.Framework.Avatar" ;
-          "Microsoft.Xna.Framework" ;
-          "Microsoft.Xna.Framework.Game" ;
-          "Microsoft.Xna.Framework.GamerServices" ;
-          "Microsoft.Xna.Framework.Graphics" ;
-          "Microsoft.Xna.Framework.Input.Touch" ;
-          "Microsoft.Xna.Framework.Net" ;
-          "Microsoft.Xna.Framework.Storage" ;
-          "Microsoft.Xna.Framework.Video" ;
-          "Microsoft.Xna.Framework.Xact" ;
-          "mscorlib" ;
-          "System.Core" ;
-          "System" ;
-          "System.Net" ;
-          "System.Xml" ;
-          "System.Xml.Linq" ;
-          "System.Xml.Serialization" ]
-        |> Set.ofList
+    let handleItem item =
+        let provided =
+            [ "Microsoft.Xna.Framework.Avatar" ;
+              "Microsoft.Xna.Framework" ;
+              "Microsoft.Xna.Framework.Game" ;
+              "Microsoft.Xna.Framework.GamerServices" ;
+              "Microsoft.Xna.Framework.Graphics" ;
+              "Microsoft.Xna.Framework.Input.Touch" ;
+              "Microsoft.Xna.Framework.Net" ;
+              "Microsoft.Xna.Framework.Storage" ;
+              "Microsoft.Xna.Framework.Video" ;
+              "Microsoft.Xna.Framework.Xact" ;
+              "mscorlib" ;
+              "System.Core" ;
+              "System" ;
+              "System.Net" ;
+              "System.Xml" ;
+              "System.Xml.Linq" ;
+              "System.Xml.Serialization" ]
+            |> Set.ofList
 
-    let path x = @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\" + x |> Some
+        let path x = @"$(MSBuildExtensionsPath32)\..\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\" + x |> Some
 
-    let (|ValuedDll|_|) att =
-        let getDll (dllSpec : string) =
-            dllSpec.Split [|','|]
-            |> Seq.head
-            |> fun x -> x.Trim()
+        let (|ValuedDll|_|) att =
+            let getDll (dllSpec : string) =
+                dllSpec.Split [|','|]
+                |> Seq.head
+                |> fun x -> x.Trim()
 
-        match att with
-        | Valued spec ->
-            spec |> getDll |> Some
-        | _ -> None
-
-    match item with
-    | Named "Reference" ->
-        let hintOverride =
-            match item.Attribute(xname "Include") with
-            | null -> None
-            | ValuedDll dll when provided.Contains(dll) -> path dll
-            | ValuedDll "FSharp.Core" ->
-                Some @"Dependencies\FShap.Core.dll"
+            match att with
+            | Valued spec ->
+                spec |> getDll |> Some
             | _ -> None
 
-        let requiredTargetFrameworkOverride =
-            match item.Attribute(xname "Include") with
-            | null -> None
-            | ValuedDll "System.Core" ->
-                Some "4.0"
-            | _ -> None
+        match item with
+        | Named "Reference" ->
+            let hintOverride =
+                match item.Attribute(xname "Include") with
+                | null -> None
+                | ValuedDll dll when provided.Contains(dll) -> path dll
+                | ValuedDll "FSharp.Core" ->
+                    Some @"Dependencies\FShap.Core.dll"
+                | _ -> None
 
+            let requiredTargetFrameworkOverride =
+                match item.Attribute(xname "Include") with
+                | null -> None
+                | ValuedDll "System.Core" ->
+                    Some "4.0"
+                | _ -> None
+
+            let subs =
+                item.Elements()
+                |> Seq.choose (fun child -> // Remove HintPath and RequiredTargetFramework if we have overriding values.
+                    match child with
+                    | Named "HintPath" ->
+                        match hintOverride with
+                        | None -> Some child
+                        | Some _ -> None
+                    | Named "RequiredTargetFramework" ->
+                        match requiredTargetFrameworkOverride with
+                        | None -> Some child
+                        | Some _ -> None
+                    | _ -> Some child)
+                |> Seq.append ( // Set HintPath if override available.
+                        match hintOverride with
+                        | Some x ->
+                            [ xelem (xNsName "HintPath") [ xstr x ] ]
+                        | None ->
+                            [])
+                |> Seq.append ( // Set RequiredTargetFramework if override available.
+                        match requiredTargetFrameworkOverride with
+                        | Some x ->
+                            [ xelem (xNsName "RequiredTargetFramework") [ xstr x ] ]
+                        | None ->
+                            [])
+
+            dup item subs
+        | _ -> item
+
+    let handleItemGroup (group : XElement) =
         let subs =
-            item.Elements()
-            |> Seq.choose (fun child -> // Remove HintPath and RequiredTargetFramework if we have overriding values.
-                match child with
-                | Named "HintPath" ->
-                    match hintOverride with
-                    | None -> Some child
-                    | Some _ -> None
-                | Named "RequiredTargetFramework" ->
-                    match requiredTargetFrameworkOverride with
-                    | None -> Some child
-                    | Some _ -> None
-                | _ -> Some child)
-            |> Seq.append ( // Set HintPath if override available.
-                    match hintOverride with
-                    | Some x ->
-                        [ xelem (xNsName "HintPath") [ xstr x ] ]
-                    | None ->
-                        [])
-            |> Seq.append ( // Set RequiredTargetFramework if override available.
-                    match requiredTargetFrameworkOverride with
-                    | Some x ->
-                        [ xelem (xNsName "RequiredTargetFramework") [ xstr x ] ]
-                    | None ->
-                        [])
+            group.Elements()
+            |> Seq.map handleItem
 
-        dup item subs
-    | _ -> item
+        dup group subs
 
-let handleItemGroup (group : XElement) =
-    let subs =
-        group.Elements()
-        |> Seq.map handleItem
+    let handleProject (project : XElement) =
+        match project with
+        | Named "Project" ->
+            let properties =
+                project.Elements()
+                |> Seq.filter (function Named "PropertyGroup" -> true | _ -> false)
+                |> Seq.map extractProperties
+                |> concatProperties
+                |> fixProperties (setXboxProperties |> setProjectGuid)
+                |> dumpProperties
 
-    dup group subs
+            let itemGroups =
+                project.Elements()
+                |> Seq.filter (function Named "ItemGroup" -> true | _ -> false)
+                |> Seq.map handleItemGroup
 
-let handleProject (project : XElement) =
-    match project with
-    | Named "Project" ->
-        let properties =
-            project.Elements()
-            |> Seq.filter (function Named "PropertyGroup" -> true | _ -> false)
-            |> Seq.map extractProperties
-            |> concatProperties
-            |> fixProperties (setXboxProperties |> setProjectGuid)
-            |> dumpProperties
+            let imports =
+                project.Elements()
+                |> Seq.filter (function Named "Import" -> true | _ -> false)
+                |> Seq.append [xelem (xNsName "Import") [ xatt (xNsName "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
 
-        let itemGroups =
-            project.Elements()
-            |> Seq.filter (function Named "ItemGroup" -> true | _ -> false)
-            |> Seq.map handleItemGroup
+            let rest =
+                project.Elements()
+                |> Seq.filter (function Named "Import" | Named "PropertyGroup" | Named "ItemGroup" -> false | _ -> true)
 
-        let imports =
-            project.Elements()
-            |> Seq.filter (function Named "Import" -> true | _ -> false)
-            |> Seq.append [xelem (xNsName "Import") [ xatt (xNsName "Project") @"$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" ] ]
+            dup project (Seq.concat [ properties ; imports ; itemGroups ; rest ])
+        | _ -> failwithf "Expected element Project, got %s" project.Name.NamespaceName
 
-        let rest =
-            project.Elements()
-            |> Seq.filter (function Named "Import" | Named "PropertyGroup" | Named "ItemGroup" -> false | _ -> true)
+    let handleDoc (data : XDocument) =
+        seq {
+            for child in data.Elements() do
+                yield handleProject child
+        }
+        |> xdoc
 
-        dup project (Seq.concat [ properties ; imports ; itemGroups ; rest ])
-    | _ -> failwithf "Expected element Project, got %s" project.Name.NamespaceName
-
-let handleDoc (data : XDocument) =
-    seq {
-        for child in data.Elements() do
-            yield handleProject child
-    }
-    |> xdoc
+open Conversion
 
 let here = @"C:\Users\johann\Documents\xnautils"
 
