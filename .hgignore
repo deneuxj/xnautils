@@ -1,21 +1,6 @@
 relre:.suo$
-relre:^XNAUtils/bin/.*
-relre:^XNAUtils/obj/.*
 glob:UpgradeLog.XML
 relre:^_UpgradeReport_Files/.*
-relre:^Samples/.*/bin/.*
-relre:^Samples/.*/obj/.*
-glob:Samples/Xbox360/App/App/App.csproj.Debug.cachefile
-glob:Samples/Xbox360/App/App/App.csproj.Release.cachefile
-glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSample.csproj.Debug.cachefile
-glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Debug.cachefile
-glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/CoopMultitaskingSample.csproj.Release.cachefile
-glob:Samples/CoopMultitaskingSample/Lib/Lib.fsproj.Release.cachefile
-relre:^XnaReplacementWindows/bin/.*
-relre:^XnaReplacementWindows/obj/.*
-glob:Samples/CoopMultitaskingSample/CoopMultitaskingSample/Windows Copy of CoopMultitaskingSample.csproj.Debug.cachefile
-relre:/bin/Debug/
-relre:/obj/Debug/
-relre:/obj/x86/Debug
-relre:/bin/Release/
-relre:obj/x86/Release
+relre:/bin/
+relre:/obj/
+relre:[.][cf]sproj[.](Debug|Release)[.]cachefile$
