@@ -81,13 +81,6 @@
       <HintPath>Dependencies\FShap.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\XNAUtils\Xbox 360 Copy of XNAUtils.fsproj">
-      <Name>Xbox 360 Copy of XNAUtils</Name>
-      <Project>{36bdd2ef-e695-4bb9-9ee2-3c1e33ef2d0b}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	     Other similar extension points exist, see Microsoft.Common.targets.
 	<Target Name="BeforeBuild">

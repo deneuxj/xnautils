@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <AssemblyName>CleverRake.XnaUtils.Core</AssemblyName>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Name>Core</Name>
+    <NoStdLib>true</NoStdLib>
+    <OutputType>Library</OutputType>
+    <Platform Condition=" '$(Platform)' == '' ">Xbox 360</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <ProjectGuid>{0ab5e7d9-4e02-4873-9b01-fbfc93d15659}</ProjectGuid>
+    <RootNamespace>Core</RootNamespace>
+    <SchemaVersion>2.0</SchemaVersion>
+    <Tailcalls>false</Tailcalls>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
+    <XnaOututType>Library</XnaOututType>
+    <XnaPlatform>Xbox 360</XnaPlatform>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|Xbox 360'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineConstants>DEBUG;TRACE;XBOX;XBOX360</DefineConstants>
+    <DocumentationFile>bin\Debug\Core.XML</DocumentationFile>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Xbox 360\Debug</OutputPath>
+    <PlatformTarget>x86</PlatformTarget>
+    <Tailcalls>false</Tailcalls>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|Xbox 360'">
+    <DebugType>pdbonly</DebugType>
+    <DefineConstants>TRACE;XBOX;XBOX360</DefineConstants>
+    <DocumentationFile>bin\Release\Core.XML</DocumentationFile>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Xbox 360\Release</OutputPath>
+    <PlatformTarget>x86</PlatformTarget>
+    <Tailcalls>false</Tailcalls>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <ItemGroup>
+    <None Include="Script.fsx" />
+    <Compile Include="ArrayInlined.fs">
+    </Compile>
+    <Compile Include="CircularQueue.fs">
+    </Compile>
+    <Compile Include="Heap.fs">
+    </Compile>
+    <Compile Include="JobQueueProcessor.fs">
+    </Compile>
+    <Compile Include="SeqUtil.fs">
+    </Compile>
+    <Compile Include="TupleStruct.fs">
+    </Compile>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Error.fs" />
+    <Compile Include="Misc.fs" />
+    <None Include="..\FSharpCore\FSharp.Core.dll">
+      <Link>FSharp.Core.dll</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.optdata">
+      <Link>FSharp.Core.optdata</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.sigdata">
+      <Link>FSharp.Core.sigdata</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.xml">
+      <Link>FSharp.Core.xml</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="FSharp.Core">
+      <HintPath>Dependencies\FShap.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+</Project>

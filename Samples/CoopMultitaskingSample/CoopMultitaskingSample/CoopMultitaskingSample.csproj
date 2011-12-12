@@ -99,17 +99,25 @@
     <Content Include="GameThumbnail.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\XNAUtils\Xbox 360 Copy of XNAUtils.fsproj">
-      <Project>{36BDD2EF-E695-4BB9-9EE2-3C1E33EF2D0B}</Project>
-      <Name>Xbox 360 Copy of XNAUtils</Name>
+    <ProjectReference Include="..\..\..\CoopMultiTasking\CoopMultitaskingXbox360.fsproj">
+      <Project>{9AF5CB0E-6332-4287-902B-A69F24701DC7}</Project>
+      <Name>CoopMultitaskingXbox360</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\CoreXbox360.fsproj">
+      <Project>{0AB5E7D9-4E02-4873-9B01-FBFC93D15659}</Project>
+      <Name>CoreXbox360</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\XNAUtils\XNAUtilsXbox360.fsproj">
+      <Project>{81034EC4-A1CC-4B0A-8B88-78097AE49A3B}</Project>
+      <Name>XNAUtilsXbox360</Name>
     </ProjectReference>
     <ProjectReference Include="..\CoopMultitaskingSampleContent\CoopMultitaskingSampleContent.contentproj">
       <Name>CoopMultitaskingSampleContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
     </ProjectReference>
-    <ProjectReference Include="..\Lib\Lib.fsproj">
-      <Project>{73F7E903-35ED-46D3-95DC-988636C0C874}</Project>
-      <Name>Lib</Name>
+    <ProjectReference Include="..\Lib\LibXbox360.fsproj">
+      <Project>{FF3D6117-5694-4DBC-A44A-677789D8F4A6}</Project>
+      <Name>LibXbox360</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

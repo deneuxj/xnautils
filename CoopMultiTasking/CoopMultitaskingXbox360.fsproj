@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <AssemblyName>CleverRake.XnaUtils.CoopMultiTasking</AssemblyName>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Name>CoopMultiTasking</Name>
+    <NoStdLib>true</NoStdLib>
+    <OutputType>Library</OutputType>
+    <Platform Condition=" '$(Platform)' == '' ">Xbox 360</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <ProjectGuid>{9af5cb0e-6332-4287-902b-a69f24701dc7}</ProjectGuid>
+    <RootNamespace>CoopMultiTasking</RootNamespace>
+    <SchemaVersion>2.0</SchemaVersion>
+    <Tailcalls>false</Tailcalls>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
+    <XnaOututType>Library</XnaOututType>
+    <XnaPlatform>Xbox 360</XnaPlatform>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|Xbox 360'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineConstants>DEBUG;TRACE;XBOX;XBOX360</DefineConstants>
+    <DocumentationFile>bin\Debug\CoopMultiTasking.XML</DocumentationFile>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Xbox 360\Debug</OutputPath>
+    <PlatformTarget>x86</PlatformTarget>
+    <Tailcalls>false</Tailcalls>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|Xbox 360'">
+    <DebugType>pdbonly</DebugType>
+    <DefineConstants>TRACE;XBOX;XBOX360</DefineConstants>
+    <DocumentationFile>bin\Release\CoopMultiTasking.XML</DocumentationFile>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Xbox 360\Release</OutputPath>
+    <PlatformTarget>x86</PlatformTarget>
+    <Tailcalls>false</Tailcalls>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <ItemGroup>
+    <None Include="Script.fsx" />
+    <Compile Include="XNAExtensions.fs">
+    </Compile>
+    <Compile Include="CoopMultiTasking.fs">
+    </Compile>
+    <Compile Include="Animations.fs">
+    </Compile>
+    <Compile Include="ScreenManager.fs">
+    </Compile>
+    <Compile Include="MenuScreen.fs">
+    </Compile>
+    <Compile Include="TextScreen.fs">
+    </Compile>
+    <Compile Include="PressStartScreen.fs">
+    </Compile>
+    <Compile Include="StorageTasks.fs">
+    </Compile>
+    <Compile Include="AssemblyInfo.fs" />
+    <None Include="..\FSharpCore\FSharp.Core.dll">
+      <Link>FSharp.Core.dll</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.optdata">
+      <Link>FSharp.Core.optdata</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.sigdata">
+      <Link>FSharp.Core.sigdata</Link>
+    </None>
+    <None Include="..\FSharpCore\FSharp.Core.xml">
+      <Link>FSharp.Core.xml</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xna.Framework">
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Game">
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.GamerServices">
+      <HintPath>..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.GamerServices.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Graphics">
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Storage">
+      <HintPath>..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Xbox360\Microsoft.Xna.Framework.Storage.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="FSharp.Core">
+      <HintPath>Dependencies\FShap.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Serialization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\CoreXbox360.fsproj">
+      <Name>CoreXbox360</Name>
+      <Project>{0ab5e7d9-4e02-4873-9b01-fbfc93d15659}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\XNAUtils\XNAUtilsXbox360.fsproj">
+      <Name>XNAUtilsXbox360</Name>
+      <Project>{81034ec4-a1cc-4b0a-8b88-78097ae49a3b}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+</Project>
