@@ -21,4 +21,15 @@ with
             let (MarkedArray arr) = this
             arr.[int i] <- v
 
+[<RequireQualifiedAccess>]
+module MarkedArray =
+    let inline set (arr : MarkedArray<'K, 'T>) idx v =
+        arr.[idx] <- v
 
+    let inline get (arr : MarkedArray<'K, 'T>) idx =
+        arr.[idx]
+
+    /// arr.[idx] <- f (arr.[idx])
+    let inline mutate f (arr, idx) =
+        let v = get arr idx
+        set arr idx (f v)
