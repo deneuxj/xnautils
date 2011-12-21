@@ -31,3 +31,10 @@ let inline exists (pred : 'T -> bool) (xs : 'T[]) : bool =
     while i < xs.Length && not (pred xs.[i]) do
         i <- i + 1
     i < xs.Length
+
+let inline filteri (pred : int -> 'T -> bool) (xs : 'T[]) : 'T[] =
+    let temp = new System.Collections.Generic.List<'T>(xs.Length)
+    for i in 0 .. xs.Length - 1 do
+        let v = xs.[i]
+        if pred i v then temp.Add(v)
+    temp.ToArray()
