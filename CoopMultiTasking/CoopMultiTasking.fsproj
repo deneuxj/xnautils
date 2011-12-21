@@ -81,9 +81,11 @@
     <Reference Include="Microsoft.Xna.Framework.Game">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Game.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Xna.Framework.GamerServices, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553" />
     <Reference Include="Microsoft.Xna.Framework.Graphics">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Graphics.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Storage, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553" />
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
     <Reference Include="System" />
@@ -94,11 +96,6 @@
     <ProjectReference Include="..\Core\Core.fsproj">
       <Name>Core</Name>
       <Project>{cbff8e99-b91a-4adc-a0ad-502616413116}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\XnaReplacementWindows\XnaReplacementWindows.fsproj">
-      <Name>XnaReplacementWindows</Name>
-      <Project>{c4ade1cd-afac-4458-a0b9-72a3c621df79}</Project>
       <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\XNAUtils\XNAUtils.fsproj">
