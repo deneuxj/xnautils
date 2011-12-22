@@ -17,6 +17,13 @@ with
         let (MarkedArray arr) = this
         arr
 
+    member this.First : int<'K> =
+        LanguagePrimitives.Int32WithMeasure 0
+
+    member this.Last : int<'K> =
+        let (MarkedArray arr) = this
+        LanguagePrimitives.Int32WithMeasure (arr.Length - 1)
+
     member this.Item
         with get (i : int<'K>) =
             let (MarkedArray arr) = this
