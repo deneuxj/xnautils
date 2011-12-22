@@ -38,3 +38,11 @@ let inline filteri (pred : int -> 'T -> bool) (xs : 'T[]) : 'T[] =
         let v = xs.[i]
         if pred i v then temp.Add(v)
     temp.ToArray()
+
+/// Filter an array ts using a predicate on a matching array rs. ts and rs must have equal length.
+let inline filterRef (pred : 'R -> bool) (rs : 'R[]) (ts : 'T[]) : 'T[] =
+    let temp = new System.Collections.Generic.List<'T>(ts.Length)
+    for i in 0 .. rs.Length - 1 do
+        let r = rs.[i]
+        if pred r then temp.Add(ts.[i])
+    temp.ToArray()
