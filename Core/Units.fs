@@ -13,6 +13,10 @@ let int2float32(v : int<'u>) : float32<'u> = LanguagePrimitives.Float32WithMeasu
 /// An array whose index has a unit of measure
 type MarkedArray<[<Measure>] 'K, 'T> = MarkedArray of 'T[]
 with
+    member this.Content =
+        let (MarkedArray arr) = this
+        arr
+
     member this.Item
         with get (i : int<'K>) =
             let (MarkedArray arr) = this
