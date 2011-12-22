@@ -37,3 +37,4 @@ with
     static member public (*) (k, U) = TypedVector.scale3 (k, U)
     static member public (+) (U, V) = TypedVector.add3 (U, V)
     static member public (-) (U, V) = TypedVector.sub3 (U, V)
+    member public this.Length = this |> TypedVector.len3
