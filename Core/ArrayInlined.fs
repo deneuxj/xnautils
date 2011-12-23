@@ -46,3 +46,17 @@ let inline filterRef (pred : 'R -> bool) (rs : 'R[]) (ts : 'T[]) : 'T[] =
         let r = rs.[i]
         if pred r then temp.Add(ts.[i])
     temp.ToArray()
+
+let inline mapi3 f (xs : 'X[]) (ys : 'Y[]) (zs : 'Z[]) =
+    let len = Array.length xs
+    let ret = Array.zeroCreate len
+    for i in 0 .. len - 1 do
+        ret.[i] <- f i xs.[i] ys.[i] zs.[i]
+    ret
+
+let inline map3 f (xs : 'X[]) (ys : 'Y[]) (zs : 'Z[]) =
+    let len = Array.length xs
+    let ret = Array.zeroCreate len
+    for i in 0 .. len - 1 do
+        ret.[i] <- f xs.[i] ys.[i] zs.[i]
+    ret
