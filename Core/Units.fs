@@ -16,6 +16,8 @@ open Microsoft.FSharp.Core
 
 let int2float32(v : int<'u>) : float32<'u> = LanguagePrimitives.Float32WithMeasure (float32 v)
 
+let intFromFloat32(v : float32<'u>) : int<'u> = LanguagePrimitives.Int32WithMeasure (int32 v)
+
 /// An array whose index has a unit of measure
 type MarkedArray<[<Measure>] 'K, 'T> = MarkedArray of 'T[]
 with
