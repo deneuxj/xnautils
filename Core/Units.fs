@@ -11,6 +11,9 @@ open Microsoft.FSharp.Core
 /// Mass, kilograms
 [<Measure>] type kg
 
+/// Force, Newtons
+[<Measure>] type N = kg m/s^2
+
 let int2float32(v : int<'u>) : float32<'u> = LanguagePrimitives.Float32WithMeasure (float32 v)
 
 /// An array whose index has a unit of measure
