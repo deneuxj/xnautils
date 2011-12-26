@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="TrajectoryCollision.fs" />
     <Compile Include="Vector3.fs" />
+    <Compile Include="QuaternionExtensions.fs" />
     <Compile Include="Hermite.fs" />
     <Compile Include="TextIcons.fs" />
     <Compile Include="ParallelUpdateDrawGameComponent.fs" />
