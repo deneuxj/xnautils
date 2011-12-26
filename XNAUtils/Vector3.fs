@@ -23,6 +23,11 @@ module TypedVector =
         Vector3.Dot(U.v, V.v)
         |> LanguagePrimitives.Float32WithMeasure<'M 'N>
 
+    let cross3 (U : TypedVector3<'M>, V : TypedVector3<'N>) =
+        let conv = LanguagePrimitives.Float32WithMeasure<'M 'N>
+        let temp = Vector3.Cross(U.v, V.v)
+        new TypedVector3<_>(conv temp.X, conv temp.Y, conv temp.Z)
+
     let len3 (U : TypedVector3<'M>) =
         LanguagePrimitives.Float32WithMeasure<'M> (U.v.Length())
 
@@ -34,6 +39,13 @@ module TypedVector =
     let normalize3 (U : TypedVector3<'M>) =
         let len = len3 U
         scale3 ((1.0f / len), U)
+
+    let tryNormalize3 (U : TypedVector3<'M>) =
+        let len = len3 U
+        if len > LanguagePrimitives.Float32WithMeasure<'M>(1e-3f) then
+            Some <| scale3 ((1.0f/ len), U)
+        else
+            None
 
 type TypedVector3<[<Measure>] 'M>
 with
