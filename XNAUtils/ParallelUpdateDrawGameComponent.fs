@@ -3,12 +3,12 @@
 open Microsoft.Xna.Framework
 open System.Threading
 
-/// An updateable and drawable game component which performs a light updates on the main thread,
+/// An updateable and drawable game component which performs light updates on the main thread,
 /// then draw on a separate thread in parallel of more computation-heavy updates.
 /// initialize_fun is called when assets are loaded.
 /// update_fun and compute_fun take a game time and an immutable state and returns a state.
 /// draw_fun takes a game time and an immutable state and returns nothing.
-type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initialize_fun, update_fun, compute_fun, draw_fun) =
+type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initialize_fun, update_fun, compute_fun, draw_fun, dispose) =
     let impl = new DrawableGameComponent(game)
 
     let mutable state = initial_state
@@ -79,7 +79,8 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initi
 
     member x.Dispose() =
         if update_thread.IsAlive then invalidOp "Cannot call Dispose until the draw function has been killed."
-
+        
+        dispose()
         impl.Dispose()
         signal_start.Dispose()
         signal_done.Dispose()
