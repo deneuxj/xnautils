@@ -3,15 +3,27 @@
 open Microsoft.Xna.Framework
 open System.Threading
 
-/// An updateable and drawable game component which performs light updates on the main thread,
-/// then draw on a separate thread in parallel of more computation-heavy updates.
+/// An update-able and drawable game component which performs light updates on the main thread,
+/// then draws on a separate thread in parallel of more computation-heavy updates.
 /// initialize_fun is called when assets are loaded.
-/// update_fun and compute_fun take a game time and an immutable state and returns a state.
-/// draw_fun takes a game time and an immutable state and returns nothing.
-type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initialize_fun, update_fun, compute_fun, draw_fun, dispose) =
+/// dispose is called when the component is disposed, and should be used to unload assets.
+/// update_fun takes a GameTime and a state, and should produce draw data and computation data.
+/// draw_fun takes a game time and draw data and should return nothing.
+/// compute_fun takes a game time and computation data and should return a new state.
+type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
+    (game,
+     initial_state : 'State,
+     initialize_fun : unit -> unit,
+     update_fun : GameTime -> 'State -> 'DrawData * 'ComputationData,
+     compute_fun : GameTime -> 'ComputationData -> 'State,
+     draw_fun : GameTime -> 'DrawData -> unit,
+     dispose : unit -> unit) =
+
     let impl = new DrawableGameComponent(game)
 
     let mutable state = initial_state
+    let mutable draw_data = Unchecked.defaultof<'DrawData>
+    let mutable compute_data = Unchecked.defaultof<'ComputationData>
     let mutable gt_shared = GameTime()
 
     let mutable enabled = true
@@ -24,7 +36,7 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initi
     let do_compute() =
         while not kill_requested do
             signal_start.WaitOne() |> ignore
-            state <- compute_fun gt_shared state
+            state <- compute_fun gt_shared compute_data
             signal_done.Set() |> ignore
 
     let update_thread = new Thread(new ThreadStart(do_compute))
@@ -39,7 +51,7 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initi
             let state = state
             gt_shared <- gt
             signal_start.Set() |> ignore
-            draw_fun gt state
+            draw_fun gt draw_data
             signal_done.WaitOne() |> ignore
 
     interface IGameComponent with
@@ -59,7 +71,9 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initi
         member x.Update(gt) =
             if impl.Enabled then
                 impl.Update(gt)
-                state <- update_fun gt state
+                let draw, compute = update_fun gt state
+                draw_data <- draw
+                compute_data <- compute
 
     interface IDrawable with
         member x.Draw(gt) =
@@ -67,7 +81,7 @@ type ParallelUpdateDrawGameComponent<'State>(game, initial_state : 'State, initi
                 impl.Draw(gt)
                 post_compute_then_draw gt
             else
-                state <- compute_fun gt state
+                state <- compute_fun gt compute_data
 
         member x.Visible = impl.Visible
         member x.add_VisibleChanged(evh) = impl.VisibleChanged.AddHandler(evh)
