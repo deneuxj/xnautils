@@ -19,7 +19,7 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
      draw_fun : GameTime -> 'DrawData -> unit,
      dispose : unit -> unit) =
 
-    let impl = new DrawableGameComponent(game)
+    inherit DrawableGameComponent(game)
 
     let mutable state = initial_state
     let mutable draw_data = Unchecked.defaultof<'DrawData>
@@ -39,7 +39,7 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
             state <- compute_fun gt_shared compute_data
             signal_done.Set() |> ignore
 
-    let update_thread = new Thread(new ThreadStart(do_compute))
+    let compute_thread = new Thread(new ThreadStart(do_compute))
 #if XBOX360
     // Set affinity
     do update_thread.SetProcessorAffinity([|3|]) // 0 and 2 are reserved, I assume the "main" thread is 1.
@@ -54,57 +54,41 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
             draw_fun gt draw_data
             signal_done.WaitOne() |> ignore
 
-    interface IGameComponent with
-        member x.Initialize() =
-            impl.Initialize()
-            initialize_fun()
+    do compute_thread.Start()
 
-    interface IUpdateable with
-        member x.Enabled = impl.Enabled
-        member x.add_EnabledChanged(evh) = impl.EnabledChanged.AddHandler(evh)
-        member x.remove_EnabledChanged(evh) = impl.EnabledChanged.RemoveHandler(evh)
+    override this.Initialize() =
+        base.Initialize()
+        initialize_fun()
 
-        member x.UpdateOrder = impl.UpdateOrder
-        member x.add_UpdateOrderChanged(evh) = impl.UpdateOrderChanged.AddHandler(evh)
-        member x.remove_UpdateOrderChanged(evh) = impl.UpdateOrderChanged.RemoveHandler(evh)
+    override this.Update(gt) =
+        if base.Enabled then
+            base.Update(gt)
+            let draw, compute = update_fun gt state
+            draw_data <- draw
+            compute_data <- compute
 
-        member x.Update(gt) =
-            if impl.Enabled then
-                impl.Update(gt)
-                let draw, compute = update_fun gt state
-                draw_data <- draw
-                compute_data <- compute
-
-    interface IDrawable with
-        member x.Draw(gt) =
-            if impl.Visible then
-                impl.Draw(gt)
-                post_compute_then_draw gt
-            else
-                state <- compute_fun gt compute_data
-
-        member x.Visible = impl.Visible
-        member x.add_VisibleChanged(evh) = impl.VisibleChanged.AddHandler(evh)
-        member x.remove_VisibleChanged(evh) = impl.VisibleChanged.RemoveHandler(evh)
-
-        member x.DrawOrder = impl.DrawOrder
-        member x.add_DrawOrderChanged(evh) = impl.DrawOrderChanged.AddHandler(evh)
-        member x.remove_DrawOrderChanged(evh) = impl.DrawOrderChanged.RemoveHandler(evh)
-
-    member x.Dispose() =
-        if update_thread.IsAlive then invalidOp "Cannot call Dispose until the draw function has been killed."
-        
-        dispose()
-        impl.Dispose()
-        signal_start.Dispose()
-        signal_done.Dispose()
-
+    override this.Draw(gt) =
+        if base.Visible then
+            base.Draw(gt)
+            post_compute_then_draw gt
+        else
+            state <- compute_fun gt compute_data
+    
     interface System.IDisposable with
-        member x.Dispose() = x.Dispose()
+        member this.Dispose() =
+            base.Dispose()
+            dispose()
+            signal_start.Dispose()
+            signal_done.Dispose()
 
-    // Must be called from the main thread.
-    member x.RequestKill() =
+    // member this.Dispose() = () // DrawableGameComponent.Dispose() is sealed. Thank you very much...
+
+    member this.RequestKill() =
         kill_requested <- false
         signal_start.Set() |> ignore
 
-    member x.IsDead = not(update_thread.IsAlive)
+    member this.WaitUntilDead() =
+        compute_thread.Join()
+
+    member this.IsDead = not(compute_thread.IsAlive)
+
