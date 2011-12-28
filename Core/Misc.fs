@@ -62,3 +62,8 @@ module Parallel =
         Array.Parallel.mapi f arr
 
 #endif
+
+module EvilNull =
+    let (|NonNull|Null|) x =
+        if x = null then Null
+        else NonNull x
