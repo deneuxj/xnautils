@@ -6,8 +6,11 @@ open System
 let NO_INTERSECTION = Single.NaN
 let isNoIntersection x = Single.IsNaN x
 
-let (|NoIntersection|_|) x = if Single.IsNaN x then Some() else None
-let (|IntersectionAt|_|) x = if Single.IsNaN x then None else Some x
+let (|NoIntersection|IntersectionAt|) x =
+    if Single.IsNaN x then
+        NoIntersection
+    else
+        IntersectionAt x
 
 let getIntersectionTime (pos1 : Vector3, vel1 : Vector3, r1 : float32,
                          pos2 : Vector3, vel2 : Vector3, r2 : float32) =
@@ -26,7 +29,7 @@ let getIntersectionTime (pos1 : Vector3, vel1 : Vector3, r1 : float32,
         
         if Δ > 0.0f
         then
-            let Δ' = Math.Sqrt(float Δ) |> float32
+            let Δ' = sqrt Δ |> float32
             let r1 = (-b - Δ')/(2.0f * a)
             let r2 = (-b + Δ')/(2.0f * a)
             
