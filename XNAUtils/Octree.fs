@@ -38,7 +38,7 @@ type FloatPair (a : float32, b : float32) =
     member x.B = b
 
 
-let inline split intersect (node : Node<'T list>) =
+let split intersect (node : Node<'T list>) =
     match node.data with
     | Leaf(count, items) ->
         let inline mkBBox (p1 : Vector3) (p2 : Vector3) =
@@ -70,7 +70,7 @@ let inline split intersect (node : Node<'T list>) =
     | Inner _ -> raise (new ArgumentException("Cannot split an inner node", "node"))
 
     
-let inline insert max_count max_depth intersect (node : Node<'T list>) item depth =
+let insert max_count max_depth intersect (node : Node<'T list>) item depth =
     let rec work node item depth =
         assert (
             intersect node.bbox item
@@ -95,6 +95,16 @@ let inline insert max_count max_depth intersect (node : Node<'T list>) item dept
             }
 
     work node item depth
+
+/// Turn an octree using lists to store items to an octree that uses arrays
+let rec freeze octree =
+    match octree with
+    | { bbox = bbox; data = Leaf(len, items) } -> { bbox = bbox; data = Leaf(len, Array.ofList items) }
+    | { bbox = bbox; data = Inner(children) } ->
+        let children =
+            children
+            |> Array.map freeze
+        { bbox = bbox; data = Inner children }
 
 
 let checkIntersection intersectBbox intersectSomeItem node =
