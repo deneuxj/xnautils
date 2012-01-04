@@ -9,6 +9,10 @@ type TypedVector3<[<Measure>] 'M> =
         new(x : float32<'M>, y : float32<'M>, z : float32<'M>) =
             { v = Vector3(float32 x, float32 y, float32 z) }
         new(V) = { v = V }
+
+        member this.X : float32<'M> = LanguagePrimitives.Float32WithMeasure this.v.X
+        member this.Y : float32<'M> = LanguagePrimitives.Float32WithMeasure this.v.Y
+        member this.Z : float32<'M> = LanguagePrimitives.Float32WithMeasure this.v.Z
     end
 
 [<RequireQualifiedAccessAttribute>]
