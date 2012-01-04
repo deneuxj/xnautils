@@ -32,6 +32,17 @@ let inline exists (pred : 'T -> bool) (xs : 'T[]) : bool =
         i <- i + 1
     i < xs.Length
 
+// Early exit: No.
+// Array bounds check removed: Yes
+let inline tryMapFirst (pred : 'T -> 'R option) (xs : 'T[]) : 'R option =
+    let mutable res = None
+    for i in 0..xs.Length-1 do
+        if Option.isNone res then
+            match pred xs.[i] with
+            | Some _ as v -> res <- v
+            | None -> ()
+    res
+
 let inline filteri (pred : int -> 'T -> bool) (xs : 'T[]) : 'T[] =
     let temp = new System.Collections.Generic.List<'T>(xs.Length)
     for i in 0 .. xs.Length - 1 do

@@ -37,19 +37,18 @@ type FloatPair (a : float32, b : float32) =
     member x.A = a
     member x.B = b
 
+let mkBBox (p1 : Vector3) (p2 : Vector3) =
+    let prX =
+        if p1.X < p2.X then FloatPair(p1.X, p2.X) else FloatPair(p2.X, p1.X)
+    let prY =
+        if p1.Y < p2.Y then FloatPair(p1.Y, p2.Y) else FloatPair(p2.Y, p1.Y)
+    let prZ =
+        if p1.Z < p2.Z then FloatPair(p1.Z, p2.Z) else FloatPair(p2.Z, p1.Z)
+    BoundingBox (Vector3 (prX.A, prY.A, prZ.A), Vector3 (prX.B, prY.B, prZ.B))
 
 let split intersect (node : Node<'T list>) =
     match node.data with
     | Leaf(count, items) ->
-        let inline mkBBox (p1 : Vector3) (p2 : Vector3) =
-            let prX =
-                if p1.X < p2.X then FloatPair(p1.X, p2.X) else FloatPair(p2.X, p1.X)
-            let prY =
-                if p1.Y < p2.Y then FloatPair(p1.Y, p2.Y) else FloatPair(p2.Y, p1.Y)
-            let prZ =
-                if p1.Z < p2.Z then FloatPair(p1.Z, p2.Z) else FloatPair(p2.Z, p1.Z)
-            BoundingBox (Vector3 (prX.A, prY.A, prZ.A), Vector3 (prX.B, prY.B, prZ.B))
-
         let sub_bboxes =
             let center = 0.5f * (node.bbox.Min + node.bbox.Max)
             node.bbox.GetCorners()
@@ -109,12 +108,12 @@ let rec freeze octree =
 
 let checkIntersection intersectBbox intersectSomeItem node =
     let rec work node =
-        intersectBbox node.bbox
-        &&
-        match node.data with
-        | Leaf(_, items) ->
-            intersectSomeItem items
-        | Inner(children) ->
-            children |> ArrayInlined.exists work
-        
+        if intersectBbox node.bbox then
+            match node.data with
+            | Leaf(_, items) ->
+                intersectSomeItem items
+            | Inner(children) ->
+                children |> ArrayInlined.tryMapFirst work
+        else
+            None
     work node
