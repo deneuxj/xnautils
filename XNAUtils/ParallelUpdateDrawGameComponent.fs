@@ -3,6 +3,9 @@
 open Microsoft.Xna.Framework
 open System.Threading
 
+type IFramePerSecondCounter =
+    abstract FramesPerSecond : float
+
 /// An update-able and drawable game component which performs light updates on the main thread,
 /// then draws on a separate thread in parallel of more computation-heavy updates.
 /// initialize_fun is called when assets are loaded.
@@ -54,6 +57,11 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
             draw_fun gt draw_data
             signal_done.WaitOne() |> ignore
 
+    let mutable frameCounter = 0
+    let mutable timeCounter = 0.0
+    let mutable fps = 0.0
+    let fpsUpdatePeriod = 0.3
+
     do compute_thread.Start()
 
     override this.Initialize() =
@@ -73,6 +81,13 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
             post_compute_then_draw gt
         else
             state <- compute_fun gt compute_data
+        timeCounter <- timeCounter + gt.ElapsedGameTime.TotalSeconds
+        frameCounter <- frameCounter + 1
+        if timeCounter > fpsUpdatePeriod then
+            fps <- float frameCounter / timeCounter
+            timeCounter <- timeCounter - fpsUpdatePeriod
+            frameCounter <- 0
+
     
     interface System.IDisposable with
         member this.Dispose() =
@@ -82,6 +97,11 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
             signal_done.Dispose()
 
     // member this.Dispose() = () // DrawableGameComponent.Dispose() is sealed. Thank you very much...
+
+    interface IFramePerSecondCounter with
+        member this.FramesPerSecond = fps
+
+    member this.FramesPerSecond = fps
 
     member this.RequestKill() =
         kill_requested <- false
