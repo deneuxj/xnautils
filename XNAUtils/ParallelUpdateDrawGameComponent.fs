@@ -36,17 +36,17 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
     let mutable kill_requested = false
     let signal_done = new AutoResetEvent(false)
 
-    let do_compute() =
+    let rec do_compute() =
+#if XBOX360
+    // Set affinity
+        compute_thread.SetProcessorAffinity(3) // 0 and 2 are reserved, I assume the "main" thread is 1.
+#endif
         while not kill_requested do
             signal_start.WaitOne() |> ignore
             state <- compute_fun gt_shared compute_data
             signal_done.Set() |> ignore
 
-    let compute_thread = new Thread(new ThreadStart(do_compute))
-#if XBOX360
-    // Set affinity
-    do compute_thread.SetProcessorAffinity([|3|]) // 0 and 2 are reserved, I assume the "main" thread is 1.
-#endif
+    and compute_thread : Thread = new Thread(new ThreadStart(do_compute))
 
     // Must be called from the main thread.
     let post_compute_then_draw gt =
@@ -62,7 +62,9 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
     let mutable fps = 0.0
     let fpsUpdatePeriod = 0.3
 
-    do compute_thread.Start()
+    do
+        compute_thread.IsBackground <- true
+        compute_thread.Start()
 
     override this.Initialize() =
         base.Initialize()
