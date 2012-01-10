@@ -45,7 +45,7 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
     let compute_thread = new Thread(new ThreadStart(do_compute))
 #if XBOX360
     // Set affinity
-    do update_thread.SetProcessorAffinity([|3|]) // 0 and 2 are reserved, I assume the "main" thread is 1.
+    do compute_thread.SetProcessorAffinity([|3|]) // 0 and 2 are reserved, I assume the "main" thread is 1.
 #endif
 
     // Must be called from the main thread.
