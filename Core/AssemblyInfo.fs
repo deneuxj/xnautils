@@ -12,7 +12,7 @@ open System.Runtime.InteropServices
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
 [<assembly: AssemblyProduct("Core")>]
-[<assembly: AssemblyCopyright("Copyright © Johann Deneux 2011")>]
+[<assembly: AssemblyCopyright("Copyright © Johann Deneux 2011, 2012")>]
 [<assembly: AssemblyTrademark("")>]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
