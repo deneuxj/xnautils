@@ -67,3 +67,8 @@ module EvilNull =
     let (|NonNull|Null|) x =
         if x = null then Null
         else NonNull x
+
+
+module Dispose =
+    let dispose (d : #System.IDisposable) =
+        d.Dispose()
