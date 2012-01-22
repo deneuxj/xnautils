@@ -60,6 +60,7 @@
     <Compile Include="Octree.fs" />
     <Compile Include="InputChanges.fs" />
     <Compile Include="GridLayout.fs" />
+    <Compile Include="ScreenCoordinates.fs" />
     <Compile Include="AssemblyInfo.fs" />
     <None Include="Script.fsx" />
   </ItemGroup>
