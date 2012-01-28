@@ -63,6 +63,7 @@
     <Compile Include="ScreenCoordinates.fs" />
     <Compile Include="AssemblyInfo.fs" />
     <None Include="Script.fsx" />
+    <Compile Include="Random.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">
