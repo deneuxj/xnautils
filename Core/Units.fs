@@ -56,3 +56,6 @@ module MarkedArray =
         let v = get arr idx
         set arr idx (f v)
 
+    let add item (MarkedArray arr) =
+        Array.concat [ arr; [| item |] ]
+        |> MarkedArray
