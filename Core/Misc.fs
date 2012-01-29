@@ -11,6 +11,10 @@ module Maybe =
 
     let fail = None
 
+    let delay (f : unit -> Maybe<'a>) = f
+    
+    let run (f : unit -> Maybe<'a>) = f()
+
     let bind rest p =
         match p with
             | None -> fail
@@ -18,17 +22,30 @@ module Maybe =
 
     let rec whileLoop cond body =
         if cond() then
-            match body() with
-            | Some() ->
-                whileLoop cond body
-            | None ->
-                fail
+            body() |> bind (fun () -> whileLoop cond body)
         else
             succeed()
+    
+    let combine e1 (f2 : unit -> Maybe<'a>) =
+        e1 |> bind f2
 
-    let combine e1 e2 =
-        e1 |> bind (fun () -> e2)
+    let tryWith (f : unit -> Maybe<'a>) handler =
+        let res =
+            try
+                Choice1Of2 (f())
+            with
+                e -> Choice2Of2 e
 
+        match res with
+        | Choice1Of2 res -> res
+        | Choice2Of2 exc -> handler exc
+
+    let tryFinally (f : unit -> Maybe<'a>) compensation =
+        try
+            f()
+        finally
+            compensation()
+                            
     let forLoop (xs : 'T seq) f =
         using (xs.GetEnumerator()) (fun it ->
                 whileLoop
@@ -37,15 +54,21 @@ module Maybe =
             )
 
     type MaybeBuilder() =
-        member b.Return(x)  = succeed x
-        member x.ReturnFrom(r) = r
-        member b.Bind(p, rest) = p |> bind rest
-        member b.Let(p,rest) : Maybe<'a> = rest p
-        member x.Combine(e1, e2) = combine e1 e2
-        member x.For(xs, body) = forLoop xs body
-        member x.Zero() = succeed()
+        member this.Delay(e) = delay e
+        member this.Run(f) = run f
+        member this.Return(x)  = succeed x
+        member this.ReturnFrom(r) = r
+        member this.Bind(p, rest) = p |> bind rest
+        member this.Let(p,rest) : Maybe<'a> = rest p
+        member this.Combine(e1, e2) = combine e1 e2
+        member this.Zero() = succeed()
+        member this.For(xs, body) = forLoop xs body
+        member this.While(cond, body) = whileLoop cond body
+        member this.TryWith(body, handler) = tryWith body handler
+        member this.TryFinally(body, compensation) = tryFinally body compensation
 
     let maybe = MaybeBuilder()
+
 
 module MaybeTests =
     open Maybe
@@ -67,6 +90,55 @@ module MaybeTests =
                 let! x = x
                 printfn "%s" x
         }
+
+    let testWhile() =
+        maybe {
+            let x = ref 3
+            while x.Value >= 0 do
+                x := x.Value - 1
+                let! n = Some x.Value
+                printfn "%d" n
+            while x.Value <= 3 do
+                x := x.Value + 1
+                let! n = if x.Value <= 2 then Some x.Value else None
+                printfn "%d" n
+        }
+
+    let testTryWith() =
+        maybe {
+            try
+                printfn "Printed 1"
+                failwith "Stop"
+                printfn "Not printed"
+            with
+                e -> printfn "Printed 2"
+        }
+
+    let testTryFinally() =
+        maybe {
+            try
+                printfn "Printed 1"
+            finally
+                printfn "Printed 2"
+
+            try
+                try
+                    printfn "Printed 3"
+                    failwith "Stop"
+                    printfn "Not printed"
+                finally
+                    printfn "Printed 4"
+            with
+                _ -> ()
+
+            try
+                printfn "Printed 5"
+                let! n = None
+                printfn "Not printed"
+            finally
+                printfn "Printed 6"
+        }
+
 
 module RepeatUntil =
     /// Repeat f until it returns Some(x), and return x.
