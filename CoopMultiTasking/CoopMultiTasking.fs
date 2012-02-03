@@ -118,13 +118,13 @@ module Core =
             return! BlockedCond(f, fun() -> Completed())
     }
 
+
 [<AutoOpen>]
 module Sys =
     open Core
     open CleverRake.XnaUtils
 
-    // Lock, can be used for mutual exclusion.
-    // Locks should not be shared across instances of Scheduler.
+    /// A lock which can be used for mutual exclusion between tasks on the same scheduler.
     type Lock() =
         let mutable locked = false;
 
@@ -141,8 +141,8 @@ module Sys =
                 ()
             }
 
-    // A blocking channel which can be used for cross-task communication.
-    // Note that sending blocks until the message is received.
+    /// A blocking channel which can be used for cross-task communication and synchronization.
+    /// Note that sending blocks until the message is received.
     type BlockingChannel<'M>() =
         let mutable content = None
         let mutable flag_send = false
@@ -168,9 +168,8 @@ module Sys =
                 return ret
             }
 
-    (* Execution *)
-
-    type SleepingTaskTuple =
+    /// Value-type used by the scheduler.
+    type internal SleepingTaskTuple =
         struct
             val f : unit -> Eventually<unit>
             val release_at : int64
@@ -210,6 +209,7 @@ module Sys =
         let deltaToTicks dt =
             int64 (dt * 10000000.0f)
 
+        /// Add a new task.
         member x.AddTask(t) =
             match t with
             | Running f | Yield f -> CircularQueue.add ready f
@@ -218,14 +218,17 @@ module Sys =
             | BlockedCond(cond, f) -> watching.Add(new TupleStruct2<_,_>(cond, f))
             | Completed _ -> ()
     
+        /// Returns true if the scheduler has tasks that haven't run to completion.
         member x.HasLiveTasks =
             waiting.count > 0
             || ready.len > 0
             || blocked_next_frame.Count > 0
             || watching.Count > 0
 
+        /// Get the amount of time this scheduler has been active, in ticks.
         member x.GetTicks() = !ticks
 
+        /// Move all tasks in the waiting and watching queues to the ready queue.
         member x.WakeAll() =
             while not (Heap.isEmpty waiting) do
                 let f = peekWaitingTask().f
@@ -238,7 +241,9 @@ module Sys =
             watching.Clear()
             
 
-        // Run tasks for the current frame. dt is the frame time (typically 0.016666... for 60 fps)
+        /// Run tasks for the current frame. dt is the frame time (typically 0.016666... for 60 fps)
+        /// A task that throws an uncaught exception will be marked as completed.
+        /// The exception is recorded and can be accessed in this.Exceptions.
         member x.RunFor(dt) =
             let end_frame = !ticks + deltaToTicks dt
 
@@ -304,10 +309,13 @@ module Sys =
 
             ticks := end_frame
 
+        /// Get the list of uncaught exceptions thrown by tasks.
         member x.Exceptions = !exceptions
 
+        /// Return true if the list of uncaught exceptions is non-empty.
         member x.HasExceptions = not (List.isEmpty !exceptions)
 
+        /// Clear the list of uncaught exceptions.
         member x.ClearExceptions() = exceptions := []
 
 
@@ -316,32 +324,36 @@ module Sys =
         return box res
     }
 
-    // Allows the parent of a task to request the task to terminate.
-    // Also allows the parent to be notified when the task terminates.
+    /// Allows the parent of a task to request the task to terminate.
+    /// Also allows the parent to be notified when the task terminates.
     type TaskController internal (kill, killed) =
         member x.Kill() = kill := true
         member x.IsDead = !killed
 
-    // A class offering a subset of the functionalities of System.Diagnostics.Stopwatch which uses the scheduler's time.
+    /// A class offering a subset of the functionalities of System.Diagnostics.Stopwatch which uses the scheduler's time.
     type Stopwatch internal (sch : Scheduler) =
         let mutable acc = 0L
         let mutable start = 0L
         let mutable is_running = false
 
+        /// Reset the elapsed time and stop the watch.
         member this.Reset() =
             acc <- 0L
             is_running <- false
 
+        /// Start the watch.
         member this.Start() =
             if not is_running then
                 is_running <- true
                 start <- sch.GetTicks()
 
+        /// Pause the watch. The elapsed time is not reset.
         member this.Stop() =
             if is_running then
                 is_running <- false
                 acc <- acc + sch.GetTicks() - start
 
+        /// Return the amount of time the watch has been running since it was last reset.
         member this.Elapsed
             with get() =
                 new System.TimeSpan(
@@ -349,15 +361,18 @@ module Sys =
                     +
                     if is_running then sch.GetTicks() - start else 0L)
 
+        /// Return the elapsed time in seconds.
         member this.ElapsedSeconds
             with get() =
                 float32 (acc + if is_running then sch.GetTicks() - start else 0L)
                 / 10000000.0f
 
+        /// Return true if this watch is running.
         member this.IsRunning
             with get() = is_running
 
-
+    /// Type of exception thrown by Environment to notify tasks that they are being killed.
+    /// Tasks can catch this exception to shut down properly, but should not continue executing.
     exception TaskKilled of obj
 
     // An "operating system API" to be used from tasks.
@@ -371,15 +386,17 @@ module Sys =
             | None -> ()
         }
 
+        /// Request to kill all task, passing user-specific data.
         member this.StartKillAll(data) =
             killing_data := Some data
             scheduler.WakeAll()
 
+        /// Stop killing tasks. Use this after an invokation of StartKill after all tasks are dead and before adding new tasks.
         member this.StopKillAll() =
             killing_data := None
 
-        // Spawn a new concurrent subtask.
-        // The subtask must take a reference to a bool which indicates (when true) when the task should terminate itself.
+        /// Spawn a new concurrent subtask.
+        /// The subtask must take a reference to a bool which indicates (when true) when the task should terminate itself.
         member this.Spawn t =
             let kill = ref false
             let killed = ref false
@@ -395,7 +412,7 @@ module Sys =
 
             TaskController(kill, killed)
 
-        // Spawn a new concurrent subtask that will be executed in a loop.
+        /// Spawn a new concurrent subtask that will be executed in a loop.
         member this.SpawnRepeat t =
             let kill = ref false
             let killed = ref false
@@ -411,30 +428,35 @@ module Sys =
 
             TaskController(kill, killed)
 
+        /// Wait until for an amount of time.
         member this.Wait dt = task {
             do! checkAndKill
             do! wait dt
             do! checkAndKill
         }
 
+        /// Yield control to the next ready task.
         member this.Yield() = task {
             do! checkAndKill
             do! nextTask()
             do! checkAndKill
         }
 
+        /// Wait until next frame.
         member this.WaitNextFrame() = task {
             do! checkAndKill
             do! nextFrame()
             do! checkAndKill
         }
 
+        /// Wait until a confition is fulfilled.
         member this.WaitUntil cond = task {
             do! checkAndKill
             do! waitUntil cond
             do! checkAndKill
         }
 
+        /// Wait until an amount of time as passed or a condition is fulfilled.
         member this.WaitUnless(dt, cond) = task {
             do! checkAndKill
             let watch = new Stopwatch(scheduler)
@@ -443,8 +465,27 @@ module Sys =
             do! checkAndKill
         }
 
+        /// Wait until an event is raised, then return the event argument.
+        member this.AwaitEvent (ev : IEvent<'T>) =
+            let result = ref None
+            let subscription : System.IDisposable option ref = ref None
+            let handler arg =
+                result := Some arg
+                match subscription.Value with
+                | Some disposable -> disposable.Dispose()
+                | None -> ()
+
+            task {
+                subscription := Some <| ev.Subscribe handler
+                do! this.WaitUntil (fun () -> result.Value.IsSome)            
+                return result.Value.Value
+            }
+
+        /// Return a new lock.
         member this.NewLock() = new Lock()
 
+        /// Return a new blocking channel.
         member this.NewChannel<'M>() = new BlockingChannel<'M>()
 
+        /// Return a new stop watch.
         member this.NewStopwatch() = new Stopwatch(scheduler)
