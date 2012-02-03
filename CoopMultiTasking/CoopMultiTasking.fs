@@ -466,7 +466,7 @@ module Sys =
         }
 
         /// Wait until an event is raised, then return the event argument.
-        member this.AwaitEvent (ev : IEvent<'T>) =
+        member this.AwaitEvent (ev : System.IObservable<'T>) =
             let result = ref None
             let subscription : System.IDisposable option ref = ref None
             let handler arg =
