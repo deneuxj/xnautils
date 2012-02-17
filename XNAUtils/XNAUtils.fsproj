@@ -62,8 +62,8 @@
     <Compile Include="GridLayout.fs" />
     <Compile Include="ScreenCoordinates.fs" />
     <Compile Include="AssemblyInfo.fs" />
-    <None Include="Script.fsx" />
     <Compile Include="Random.fs" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Xna.Framework">
