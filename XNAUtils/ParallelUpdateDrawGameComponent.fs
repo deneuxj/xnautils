@@ -70,19 +70,18 @@ type ParallelUpdateDrawGameComponent<'State, 'DrawData, 'ComputationData>
         base.Initialize()
         initialize_fun()
 
-    override this.Update(gt) =
+    override this.Draw(gt) =
         if base.Enabled then
-            base.Update(gt)
             let draw, compute = update_fun gt state
             draw_data <- draw
             compute_data <- compute
 
-    override this.Draw(gt) =
-        if base.Visible then
-            base.Draw(gt)
-            post_compute_then_draw gt
-        else
-            state <- compute_fun gt compute_data
+            if base.Visible then
+                base.Draw(gt)
+                post_compute_then_draw gt
+            else
+                state <- compute_fun gt compute_data
+
         timeCounter <- timeCounter + gt.ElapsedGameTime.TotalSeconds
         frameCounter <- frameCounter + 1
         if timeCounter > fpsUpdatePeriod then
