@@ -52,7 +52,9 @@
     <Compile Include="Octree.fs" />
     <Compile Include="InputChanges.fs" />
     <Compile Include="GridLayout.fs" />
+    <Compile Include="ScreenCoordinates.fs" />
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Random.fs" />
     <None Include="Script.fsx" />
     <None Include="..\FSharpCore\FSharp.Core.dll">
       <Link>FSharp.Core.dll</Link>
