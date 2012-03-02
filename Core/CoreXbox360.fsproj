@@ -56,9 +56,10 @@
     </Compile>
     <Compile Include="TupleStruct.fs">
     </Compile>
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Error.fs" />
     <Compile Include="Misc.fs" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="AssemblyInfo.fs" />
     <None Include="..\FSharpCore\FSharp.Core.dll">
       <Link>FSharp.Core.dll</Link>
     </None>
