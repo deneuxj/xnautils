@@ -60,3 +60,14 @@ let pick (q : CircularQueue<'T>) : 'T =
 
 let isEmpty (q : CircularQueue<'T>) : bool =
     q.len = 0
+
+let validIndices (q : CircularQueue<'T>) : int seq =
+    seq {
+        for i in 0 .. q.len - 1 -> (q.first + i) % q.capacity
+    }
+
+let content (q : CircularQueue<'T>) : 'T seq =
+    seq {
+        for i in validIndices q -> q.content.[i]
+    }
+    

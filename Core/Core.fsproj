@@ -71,6 +71,7 @@
     </Compile>
     <Compile Include="Error.fs" />
     <Compile Include="Misc.fs" />
+    <Compile Include="Logging.fs" />
     <Compile Include="AssemblyInfo.fs" />
   </ItemGroup>
   <ItemGroup>
