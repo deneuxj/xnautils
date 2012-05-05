@@ -161,23 +161,6 @@ module Option =
         | None -> v
         | Some x -> x
                 
-(* Parallel map *)
-
-module Parallel =
-#if DEBUG
-
-    let pmap = Array.map
-    let pmapi = Array.mapi
-
-#else
-
-    let pmap f arr =
-        Array.Parallel.map f arr
-
-    let pmapi f arr =
-        Array.Parallel.mapi f arr
-
-#endif
 
 module EvilNull =
     let (|NonNull|Null|) x =
