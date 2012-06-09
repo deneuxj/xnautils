@@ -168,6 +168,8 @@ module Sys =
                 return ret
             }
 
+        member this.IsEmpty() = content.IsNone
+
     /// Value-type used by the scheduler.
     type internal SleepingTaskTuple =
         struct
