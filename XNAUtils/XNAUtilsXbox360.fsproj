@@ -43,7 +43,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="Exists('$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
     <Compile Include="TrajectoryCollision.fs" />
-    <Compile Include="Vector3.fs" />
+    <Compile Include="TypedVector.fs" />
     <Compile Include="QuaternionExtensions.fs" />
     <Compile Include="Hermite.fs" />
     <Compile Include="TextIcons.fs" />
