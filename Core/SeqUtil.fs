@@ -21,3 +21,21 @@ let listZip4 l1 l2 l3 l4 =
         | [], [], [], [] -> []
         | _ -> failwith "Lengths don't match"
     work l1 l2 l3 l4
+
+/// Return the indices of the two smallest items. Uses index -1 for "no such index" (if xs contains less than two items)
+let minBy2 f xs =
+    let far = System.Single.PositiveInfinity
+    let _, ((m0, _), (m1, _)) =
+        xs
+        |> Array.fold (fun (i, ((i0, d0), (i1, d1) as x)) v ->
+            let d = f v
+            let matches =
+                if d < d0 then
+                    ((i, d), (i0, d0))
+                elif d < d1 then
+                    ((i0, d0), (i, d))
+                else
+                    x
+            (i + 1, matches)) (0, ((-1, far), (-1, far)))
+
+    (m0, m1)
