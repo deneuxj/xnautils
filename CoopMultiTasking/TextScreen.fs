@@ -16,6 +16,8 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
     let input = new InputChanges(player)
 
+    let offset = ref 0.0f
+
     member this.Task = task {
         impl.PreDrawer <- fun () -> Some()
         impl.Drawer <- this.Drawer
@@ -27,6 +29,10 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
             not (impl.IsActive
                  && (input.IsBackPressed() || input.IsStartPressed())) do
             input.Update()
+            if input.IsMenuDown() then
+                offset := !offset - 10.0f
+            elif input.IsMenuUp() then
+                offset := !offset + 10.0f
             do! sys.WaitNextFrame()
 
         animator.Kill()
@@ -45,7 +51,7 @@ type TextScreen(player : PlayerIndex, sys : Environment, lines : string[], place
 
             lines
             |> Array.iteri(fun i txt ->
-                let y = placement.top + (float32 i) * placement.spacing
+                let y = !offset + placement.top + (float32 i) * placement.spacing
                 let pos = new Vector2(placement.left, y)
                 impl.SpriteBatch.DrawString(impl.Font1, txt, pos, color)
                 )
