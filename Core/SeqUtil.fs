@@ -39,3 +39,7 @@ let minBy2 f xs =
             (i + 1, matches)) (0, ((-1, far), (-1, far)))
 
     (m0, m1)
+
+let minBy f xs =
+    let res, _ = minBy2 f xs
+    res
