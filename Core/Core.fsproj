@@ -57,6 +57,8 @@
   <ItemGroup>
     <None Include="Script.fsx" />
     <Compile Include="Units.fs" />
+    <Compile Include="Trinomial.fs" />
+    <Compile Include="CylinderSphereCollision.fs" />
     <Compile Include="ArrayInlined.fs">
     </Compile>
     <Compile Include="CircularQueue.fs">
